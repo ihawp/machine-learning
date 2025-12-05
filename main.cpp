@@ -3,26 +3,15 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <unordered_map>
 #include <expected>
 #include <chrono>
 
-struct FileData {
-    std::filesystem::path filename;
-    std::vector<std::string> columns;
-};
-
 struct ArgumentData {
-    std::filesystem::path f; // filename
-    std::string v; // values
-    int vc; // values count;
-};
-
-class ArgumentHandler {
-    private:
-        ArgumentData ad;
-    public:
-        ArgumentHandler() { std::cout << "Arguments Initialized" << "\n"; }
-        ~ArgumentHandler() { std::cout << "Arguments Destroyed" << "\n"; }
+    std::filesystem::path f;    // filename
+    std::string v;              // do
+    int vc;                     // do count;
+    std::string b;              // by
 };
 
 std::expected<int, std::string> checkArgv
@@ -40,6 +29,7 @@ std::expected<int, std::string> checkArgv
     }
 
     if (!std::filesystem::exists(ad.f)) {
+        std::cout << ad.f << "\n";
         return std::unexpected("Table does not exist.");
     }
 
@@ -51,7 +41,7 @@ std::expected<int, std::string> checkArgv
         return std::unexpected("Failed to open table.");
     }
 
-    f << ad.v << "\n"; // Append the data to the end of the file.
+    f << ad.v << "," << ad.b << "," << 0 << "\n"; // Append the data to the end of the file.
 
     /*
     Read first line of file to get total arguments count for later 
@@ -70,6 +60,7 @@ std::expected<int, std::string> checkArgv
 }
 
 // Poor implementation.
+// Work on this.
 ArgumentData parseArgv
 (
     int argc,
@@ -95,16 +86,23 @@ ArgumentData parseArgv
             indexStarted = i;
         }
 
-        else if (arg == "-v") {
-            lastArgument = "-v";
+        else if (arg == "-by") {
+            lastArgument = "-by";
+            indexStarted = i;
+            std::string by = argv[i + 1];
+            ad.b = by;
+        }
+
+        else if (arg == "-do") {
+            lastArgument = "-do";
             indexStarted = i;
         }
 
-        else if (lastArgument == "-v" && indexStarted != -1) {
+        else if (lastArgument == "-do" && indexStarted != -1) {
             if (indexStarted + 1 == i) {
                 ad.v += arg;
             } else {
-                ad.v += "," + arg;
+                ad.v += " " + arg;
             }
             ad.vc += 1;
         }
@@ -114,6 +112,7 @@ ArgumentData parseArgv
     return ad;
 }
 
+// Not used.
 std::expected<int, std::string> updateTable
 (
     std::string table,
@@ -175,28 +174,28 @@ std::expected<int, std::string> createDirectory
     return 1;
 }
 
-int initializeDatabase
+std::expected<int, std::string> initializeDatabase
 (
     std::filesystem::path directory,
-    std::vector<FileData> filenames
+    std::unordered_map<std::string, std::vector<std::string>> files
 )
 {
     auto cd = createDirectory(directory);
 
     if (!cd) {
         std::cout << cd.error() << "\n";
-        return 0;
+        return std::unexpected("There was an error when initializing the \'database.\'");
     }
 
-    for (const auto& file : filenames) {
+    for (const auto& file : files) {
         std::fstream s;
-        std::filesystem::path db1p = directory / file.filename;
+        std::filesystem::path db1p = directory / file.first;
         
-        auto ct = createTable(db1p, file.columns);
+        auto ct = createTable(db1p, file.second);
         
         if (!ct) {
             std::cerr << ct.error() << "\n";
-            return 0;
+            return std::unexpected("There was an error when creating the table " + file.first);
         }
     }
 
@@ -205,19 +204,22 @@ int initializeDatabase
 
 std::expected<std::vector<std::string>, std::string> getTableColumns
 (
-    std::vector<FileData> fdv,
+    std::unordered_map<std::string, std::vector<std::string>> fdv,
     std::string filename
 )
 {
     for (const auto& fd : fdv) {
-        if (fd.filename == filename) {
-            return fd.columns;
+        if (fd.first == filename) {
+            return fd.second;
         }
     }
 
     return std::unexpected("Table does not exist!");
 }
 
+// Research to develop a better system for parsing argv
+// AND
+// executing commands in an ideal order
 int main
 (
     int argc,
@@ -225,42 +227,25 @@ int main
 )
 {
     std::filesystem::path dbp = "database";
-    std::vector<FileData> fdv = {
-        { "todo.csv", { "do", "by" } }
-    };
+    std::unordered_map<std::string, std::vector<std::string>> fdv;
+    fdv["todo.csv"] = { "do", "by", "completed" };
 
-    if (!initializeDatabase(dbp, fdv)) {
-        std::cerr << "There was an error when initializing the \'database.\'" << "\n";
+    auto id = initializeDatabase(dbp, fdv);
+
+    if (!id) {
+        std::cerr << id.error() << "\n";
         return 1;
     }
 
     ArgumentData parsed = parseArgv(argc, argv);
-    auto columns = getTableColumns(fdv, parsed.f.filename().string());
-
-    if (!columns) {
-        std::cerr << columns.error() << "\n";
-        return 1;
-    }
-
-    int columnSize = columns.value().size();
-
-    std::cout << columnSize << " " << parsed.vc << "\n";
-
-    if (columnSize != parsed.vc) {
-        if (columnSize > parsed.vc) {
-            std::cerr << "Error: Too few arguments passed." << "\n";
-        } else if (columnSize < parsed.vc) {
-            std::cerr << "Error: Too many arguments passed." << "\n";
-        }
-        return 1;
-    }
-
     auto checked = checkArgv(parsed);
 
     if (!checked) {
         std::cerr << "Error: " << checked.error() << "\n";
         return 1;
     }
+
+    std::cout << "Successfully added new row to " << parsed.f.filename().string() << "." << "\n";
 
     return 0;
 }
