@@ -5,13 +5,30 @@
 #include <thread>
 #include <conio.h>
 
+class Awesome {
+  private:
+    int cool = 10;
+  public:
+    int& Cool() {
+      return this->cool;
+    }
+    void printCool() {
+      std::cout << cool << "\n";
+    }
+};
+
+
 int main
 (
     int argc,
     char **argv
 )
 {
-
+    
+    Awesome great;
+    great.printCool();
+    great.Cool() = 20;
+    great.printCool();
 
     std::chrono::seconds duration(1);
 

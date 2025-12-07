@@ -1,6 +1,6 @@
 # Machine Learning with C++
 
-I am about to start the chapter on Linear Regression in Foundations of Math 12 and so I thought I would apply that knowledge and try to learn about linear regression models.
+I am about to start the chapter on Regression Analysis in Foundations of Math 12 and so I thought I would apply that knowledge and try to learn about linear regression models.
 
 Currently the code in main.cpp is from the mlpack examples page for the LinearRegression class.
 
