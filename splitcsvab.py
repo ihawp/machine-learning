@@ -49,9 +49,6 @@ def year1819(filename, outputFolder = "world_happiness_data"):
 
         f.close()
 
-
-# need to not put the columns in and remove the first row on left hand
-
 def year17(filename, outputFolder = "world_happiness_data"):
     with open(p.Path(outputFolder, filename + ".csv"), "r", -1) as f:
 
@@ -113,13 +110,6 @@ def year151620(filename, outputFolder = "world_happiness_data"):
 
 def main():
 
-    # DONE:
-    # 2015, 2016, 2020
-
-    # TODO:
-    # 2017 remove one
-    # 2018, 2019 remove second index, not first
-
     first_column_text = [
         "2017"
     ]
@@ -134,7 +124,6 @@ def main():
         "2018",
         "2019"
     ]
-
 
     for i in range(len(second_column_text)):
         year1819(second_column_text[i])

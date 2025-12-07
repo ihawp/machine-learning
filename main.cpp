@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <filesystem>
+#include <fstream>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 
 /*
@@ -55,6 +56,97 @@ Complex, Hermitian, Unitary !?
     BA is NOT possible:  100x1 * 5000x100
 */
 
+int updateCSV
+(
+    std::filesystem::path path,
+    std::vector<std::string> data
+)
+{
+
+    std::fstream s;
+    s.open(path, std::ios::app);
+
+    if (!s.is_open()) {
+        std::cerr << "Unable to open file." << "\n";
+        return 0;
+    }
+
+    for (int i = 0; i < data.size(); i++) {
+        if (i != 0) {
+            s << ",";
+        }
+        s << data[i];
+    }
+    s << "\n";
+
+    // s.close(); // Not required due to RAII.
+
+    return 1;
+}
+
+int createCSV
+(
+    std::filesystem::path path,
+    std::vector<std::string> columns
+)
+{
+    if (!std::filesystem::exists(path)) {
+        if (!updateCSV(path, columns)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+int createDirectory
+(
+    std::filesystem::path path
+)
+{
+    if (!std::filesystem::is_directory(path)) {
+        bool dbc = std::filesystem::create_directory(path);
+
+        if (!dbc) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+int logRun
+(
+    std::vector<std::string> data
+)
+{
+
+    std::filesystem::path directory = "log";
+
+    if (!createDirectory(directory)) {
+        std::cerr << "Failed to create directory " << directory << "\n";
+        return 0;
+    }
+
+    std::filesystem::path filepath = directory / "run.csv";
+
+    if (!std::filesystem::exists(filepath)) {
+        createCSV(filepath, {
+            "lambda",
+            "training_mse",
+            "test_mse"
+        });
+    }
+
+    if (!updateCSV(filepath, data)) {
+        return 0;
+    }
+
+    std::cout << "Record logged in " << filepath << "\n";
+
+    return 1;
+}
+
 void prepareFeaturesAndResponses
 (
     const arma::fmat& fullData,
@@ -63,6 +155,8 @@ void prepareFeaturesAndResponses
 )
 {
     const int HAPPINESS_SCORE_INDEX = 1;
+    // this might depend on the file used, but for 2017 this is the correct index.
+    // Because I can work on the details of the full CLI later...amiright?
 
     // Y
     responses = fullData.row(HAPPINESS_SCORE_INDEX);
@@ -99,12 +193,27 @@ int useLinearRegression
 
     mlpack::LinearRegression<arma::fmat> lr;
 
-    lr.Lambda() = 0.00;
+    lr.Lambda() = 0.19;
     lr.Train(trainDataset, trainResponses);
 
     // Mean Squared Error (How low can you go?)
-    std::cout << "MSE on training set: " << lr.ComputeError(trainDataset, trainResponses) << "." << "\n";
-    std::cout << "MSE on test set: " << lr.ComputeError(testDataset, testResponses) << "." << "\n";
+    float trainingMSE = lr.ComputeError(trainDataset, trainResponses);
+    float testMSE = lr.ComputeError(testDataset, testResponses);
+
+    // Capture recorded data in log/run.csv
+    std::string lambdaString = std::to_string(lr.Lambda());
+    std::string trainingMSEString = std::to_string(trainingMSE);
+    std::string testMSEString = std::to_string(testMSE);
+    std::vector<std::string> data = {
+        lambdaString,
+        trainingMSEString,
+        testMSEString
+    };
+
+    if (!logRun(data)) {
+        std::cerr << "Failed to log run." << "\n"; 
+        return 0;
+    }
 
     return 1;
 }
