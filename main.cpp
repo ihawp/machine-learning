@@ -123,7 +123,8 @@ int logRun
 
     if (!std::filesystem::exists(filepath)) {
         createCSV(filepath, {
-            "name",
+            "train",
+            "test",
             "lambda",
             "training_mse",
             "test_mse"
@@ -156,15 +157,32 @@ void prepareFeaturesAndResponses
     );
 }
 
+void prepareFeaturesAndResponses2
+(
+    const arma::fmat &fullData,
+    arma::fmat &features,
+    arma::frowvec &responses
+)
+{
+    const int HAPPINESS_SCORE_INDEX = 0;
+
+    // Y
+    responses = fullData.row(HAPPINESS_SCORE_INDEX);
+
+    // X
+    features = fullData.rows(1, fullData.n_rows - 1);
+}
+
 int linearRegression
 (
     std::string &directory,
-    std::string &filename,
+    std::string &filename1,
+    std::string &filename2,
     float &lambda
 )
 {
-    std::string trainPath = directory + "/" + filename + "a.csv";
-    std::string testPath = directory + "/" + filename + "b.csv";
+    std::string trainPath = directory + "/" + filename1;
+    std::string testPath = directory + "/" + filename2;
 
     arma::fmat trainData;
     arma::fmat testData;
@@ -187,8 +205,8 @@ int linearRegression
     arma::frowvec trainResponses, testResponses;
     arma::fmat trainDataset, testDataset;
 
-    prepareFeaturesAndResponses(trainData, trainDataset, trainResponses);
-    prepareFeaturesAndResponses(testData, testDataset, testResponses);
+    prepareFeaturesAndResponses2(trainData, trainDataset, trainResponses);
+    prepareFeaturesAndResponses2(testData, testDataset, testResponses);
 
     mlpack::LinearRegression<arma::fmat> lr;
     lr.Lambda() = lambda;
@@ -198,17 +216,10 @@ int linearRegression
     float trainingMSE = lr.ComputeError(trainDataset, trainResponses);
     float testMSE = lr.ComputeError(testDataset, testResponses);
 
-    arma::fmat predictions;
-    lr.Predict(testDataset, predictions);
-    for (const auto& pred : predictions) {
-        std::cout << pred << "\n";
-    }
-    std::cout << "Training MSE: " << trainingMSE << "\n";
-    std::cout << "Test MSE: " << testMSE << "\n";
-
     // Capture recorded data in log/run.csv
     std::vector<std::string> data = {
-        filename,
+        filename1,
+        filename2,
         std::to_string(lr.Lambda()),
         std::to_string(trainingMSE),
         std::to_string(testMSE)
@@ -233,11 +244,12 @@ int main
         return 1;
     };
 
-    std::string directory = argv[1];
-    std::string filename = argv[2]; // just the name, no file extension.
-    float lambda = std::stof(argv[3]) / 100.0000f; // passed as integer value because batch is crazy compared to c++
+    std::string directory = argv[1]; // directory containing the files
+    std::string filename1 = argv[2];
+    std::string filename2 = argv[3];
+    float lambda = std::stof(argv[4]) / 100.0000f; // passed as integer value because batch is crazy compared to c++
 
-    linearRegression(directory, filename, lambda);
+    linearRegression(directory, filename1, filename2, lambda);
 
     return 0;
 }
