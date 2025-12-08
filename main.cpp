@@ -47,15 +47,6 @@ Complex, Hermitian, Unitary !?
 
 */
 
-/*
-    Transpose trueweights (flip columns and rows) for multiplication to be allowed between matrices.
-    trueWeights.t() 100x1 => 1x100
-    Even though it is vector, it is treated like matrix with 1 row in this library.
-    This allows for multiplication with the 100x5000 dataset, where dataset is B
-    AB is POSSIBLE:      1x100 * 100x5000
-    BA is NOT possible:  100x1 * 5000x100
-*/
-
 int updateCSV
 (
     std::filesystem::path path,
@@ -117,7 +108,7 @@ int createDirectory
 
 int logRun
 (
-    std::vector<std::string> data
+    std::vector<std::string> &data
 )
 {
 
@@ -132,6 +123,7 @@ int logRun
 
     if (!std::filesystem::exists(filepath)) {
         createCSV(filepath, {
+            "name",
             "lambda",
             "training_mse",
             "test_mse"
@@ -142,16 +134,14 @@ int logRun
         return 0;
     }
 
-    std::cout << "Record logged in " << filepath << "\n";
-
     return 1;
 }
 
 void prepareFeaturesAndResponses
 (
-    const arma::fmat& fullData,
-    arma::fmat& features,
-    arma::frowvec& responses
+    const arma::fmat &fullData,
+    arma::fmat &features,
+    arma::frowvec &responses
 )
 {
     const int HAPPINESS_SCORE_INDEX = 1;
@@ -168,23 +158,33 @@ void prepareFeaturesAndResponses
     );
 }
 
-int useLinearRegression
+int linearRegression
 (
-    std::string trainPath,
-    std::string testPath
+    std::string &directory,
+    std::string &filename,
+    float &lambda
 )
 {
+    std::string trainPath = directory + "/" + filename + "a.csv";
+    std::string testPath = directory + "/" + filename + "b.csv";
 
     arma::fmat trainData;
     arma::fmat testData;
 
-    mlpack::data::Load(trainPath, trainData, true); 
-    mlpack::data::Load(testPath, testData, true);
+    bool trainDataLoaded = mlpack::data::Load(trainPath, trainData, true); 
 
-    arma::fvec trueWeights(100, arma::fill::randu);
+    if (!trainDataLoaded) {
+        std::cout << "Unable to load training data." << "\n";
+        return 0;
+    }
+
+    bool testDataLoaded = mlpack::data::Load(testPath, testData, true);
     
-    const int HAPPINESS_SCORE_INDEX = 1;
-    
+    if (!testDataLoaded) {
+        std::cout << "Unable to load test data." << "\n";
+        return 0;
+    }
+
     arma::frowvec trainResponses, testResponses;
     arma::fmat trainDataset, testDataset;
 
@@ -192,8 +192,7 @@ int useLinearRegression
     prepareFeaturesAndResponses(testData, testDataset, testResponses);
 
     mlpack::LinearRegression<arma::fmat> lr;
-
-    lr.Lambda() = 0.19;
+    lr.Lambda() = lambda;
     lr.Train(trainDataset, trainResponses);
 
     // Mean Squared Error (How low can you go?)
@@ -201,13 +200,11 @@ int useLinearRegression
     float testMSE = lr.ComputeError(testDataset, testResponses);
 
     // Capture recorded data in log/run.csv
-    std::string lambdaString = std::to_string(lr.Lambda());
-    std::string trainingMSEString = std::to_string(trainingMSE);
-    std::string testMSEString = std::to_string(testMSE);
     std::vector<std::string> data = {
-        lambdaString,
-        trainingMSEString,
-        testMSEString
+        filename,
+        std::to_string(lr.Lambda()),
+        std::to_string(trainingMSE),
+        std::to_string(testMSE)
     };
 
     if (!logRun(data)) {
@@ -224,13 +221,16 @@ int main
     char **argv
 )
 {
-    if (argc == 1) return 0;
+    if (argc < 4) {
+        std::cerr << "Too few arguments" << "\n";
+        return 1;
+    };
 
-    std::string filename = argv[1];
-    std::string trainPath = "world_happiness_data/" + filename + "a.csv";
-    std::string testPath = "world_happiness_data/" + filename + "b.csv";
+    std::string directory = argv[1];
+    std::string filename = argv[2]; // just the name, no file extension.
+    float lambda = std::stof(argv[3]) / 100.0000f; // passed as integer value because batch is crazy compared to c++
 
-    useLinearRegression(trainPath, testPath);
+    linearRegression(directory, filename, lambda);
 
     return 0;
 }
