@@ -1,6 +1,6 @@
 # Machine Learning with C++
 
-I am about to start the chapter on Regression Analysis in Foundations of Math 12 and so I thought I would apply that knowledge and try to learn about linear regression models.
+I have started the chapter on Regression Analysis in my math class and so I thought I would apply that knowledge and try to learn about linear regression models.
 
 Currently, the code contains a minor CLI for training and testing the Linear Regression model with data in ***world_happiness_data***.
 
