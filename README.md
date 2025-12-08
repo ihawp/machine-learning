@@ -2,7 +2,9 @@
 
 I am about to start the chapter on Regression Analysis in Foundations of Math 12 and so I thought I would apply that knowledge and try to learn about linear regression models.
 
-Currently the code in main.cpp is from the mlpack examples page for the LinearRegression class.
+Currently, the code contains a minor CLI for training and testing the Linear Regression model with data in ***world_happiness_data***.
+
+When a model is trained, it is also tested, this data is then recorded in the log/run.csv file.
 
 ### Citations
 ```

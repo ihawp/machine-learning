@@ -99,6 +99,7 @@ int createDirectory
         bool dbc = std::filesystem::create_directory(path);
 
         if (!dbc) {
+            std::cerr << "Failed to create directory " << path << "\n";
             return 0;
         }
     }
@@ -115,7 +116,6 @@ int logRun
     std::filesystem::path directory = "log";
 
     if (!createDirectory(directory)) {
-        std::cerr << "Failed to create directory " << directory << "\n";
         return 0;
     }
 
@@ -145,16 +145,14 @@ void prepareFeaturesAndResponses
 )
 {
     const int HAPPINESS_SCORE_INDEX = 1;
-    // this might depend on the file used, but for 2017 this is the correct index.
-    // Because I can work on the details of the full CLI later...amiright?
 
     // Y
     responses = fullData.row(HAPPINESS_SCORE_INDEX);
 
     // X
     features = arma::join_cols(
-        fullData.rows(0, 0),                
-        fullData.rows(2, fullData.n_rows - 1)  
+        fullData.rows(0, 0),
+        fullData.rows(2, fullData.n_rows - 1)
     );
 }
 
@@ -171,17 +169,18 @@ int linearRegression
     arma::fmat trainData;
     arma::fmat testData;
 
+    // true for transpose
     bool trainDataLoaded = mlpack::data::Load(trainPath, trainData, true); 
 
     if (!trainDataLoaded) {
-        std::cout << "Unable to load training data." << "\n";
+        std::cerr << "Unable to load training data." << "\n";
         return 0;
     }
 
     bool testDataLoaded = mlpack::data::Load(testPath, testData, true);
     
     if (!testDataLoaded) {
-        std::cout << "Unable to load test data." << "\n";
+        std::cerr << "Unable to load test data." << "\n";
         return 0;
     }
 
@@ -198,6 +197,14 @@ int linearRegression
     // Mean Squared Error (How low can you go?)
     float trainingMSE = lr.ComputeError(trainDataset, trainResponses);
     float testMSE = lr.ComputeError(testDataset, testResponses);
+
+    arma::fmat predictions;
+    lr.Predict(testDataset, predictions);
+    for (const auto& pred : predictions) {
+        std::cout << pred << "\n";
+    }
+    std::cout << "Training MSE: " << trainingMSE << "\n";
+    std::cout << "Test MSE: " << testMSE << "\n";
 
     // Capture recorded data in log/run.csv
     std::vector<std::string> data = {
