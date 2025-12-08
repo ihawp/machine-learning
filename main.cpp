@@ -156,6 +156,22 @@ void prepareFeaturesAndResponses
     );
 }
 
+void prepareFeaturesAndResponses2
+(
+    const arma::fmat &fullData,
+    arma::fmat &features,
+    arma::frowvec &responses
+)
+{
+    const int HAPPINESS_SCORE_INDEX = 0;
+
+    // Y
+    responses = fullData.row(HAPPINESS_SCORE_INDEX);
+
+    // X
+    features = fullData.rows(1, fullData.n_rows - 1);
+}
+
 int linearRegression
 (
     std::string &directory,
@@ -163,8 +179,12 @@ int linearRegression
     float &lambda
 )
 {
+    /*
     std::string trainPath = directory + "/" + filename + "a.csv";
     std::string testPath = directory + "/" + filename + "b.csv";
+    */
+    std::string trainPath = directory + "/" + "2015rr20c.csv";
+    std::string testPath = directory + "/" + "2020rr15c.csv";
 
     arma::fmat trainData;
     arma::fmat testData;
@@ -187,8 +207,8 @@ int linearRegression
     arma::frowvec trainResponses, testResponses;
     arma::fmat trainDataset, testDataset;
 
-    prepareFeaturesAndResponses(trainData, trainDataset, trainResponses);
-    prepareFeaturesAndResponses(testData, testDataset, testResponses);
+    prepareFeaturesAndResponses2(trainData, trainDataset, trainResponses);
+    prepareFeaturesAndResponses2(testData, testDataset, testResponses);
 
     mlpack::LinearRegression<arma::fmat> lr;
     lr.Lambda() = lambda;

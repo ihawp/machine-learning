@@ -1,20 +1,32 @@
 import pathlib as p
+import math as m
 
-def csvRemoveColumns(filepath: p.Path, newFilepath: p.Path, columns: list) -> int:
+def swapColumns(columns, swap1, swap2):
+    var = columns[swap1]
+    columns[swap1] = columns[swap2]
+    columns[swap2] = var
+
+def popColumns(columns, columnsToPop):
+    for q in columnsToPop:
+        columns.pop(q)
+
+def csvRemoveColumns(filepath: p.Path, newFilepath: p.Path, columnsToPop: list, swapThoseColumns: bool) -> int:
     try:
         with open(filepath, "r+") as f:
 
-            f.readline() # skip columns
+            columns2 = f.readline().split(',') # skip columns
+            popColumns(columns2, columnsToPop)
+            swapColumns(columns2, 5, 6)
 
             lines = f.readlines()
 
             with open(newFilepath, "w+") as f1:
                 for i in lines:
                     nl = i.split(',')
-                    for q in columns:
-                        nl.pop(q)
+                    popColumns(nl, columnsToPop)
+                    if swapThoseColumns: swapColumns(nl, 5, 6) # swap columns could be called better, not literally;
                     ns = ",".join(nl)
-                    f1.write(ns)
+                    f1.write(ns + "\n")
 
         return 1
 
@@ -35,15 +47,15 @@ def main():
 
     fp = p.Path("world_happiness_data", "2015.csv")
     nfp = p.Path("world_happiness_data", "2015rr20c.csv")
-    ffc = [2, 1, 0]
+    ffc = [11, 4, 2, 1, 0]
 
-    csvRemoveColumns(fp, nfp, ffc)
+    csvRemoveColumns(fp, nfp, ffc, True)
 
     fp1 = p.Path("world_happiness_data", "2020.csv")
     nfp1 = p.Path("world_happiness_data", "2020rr15c.csv")
-    ffc1 = [18, 17, 16, 15, 14, 13, 12, 5, 4, 1, 0]
+    ffc1 = [19, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 1, 0]
 
-    csvRemoveColumns(fp1, nfp1, ffc1)
+    csvRemoveColumns(fp1, nfp1, ffc1, False)
 
 if __name__ == '__main__':
     main()
