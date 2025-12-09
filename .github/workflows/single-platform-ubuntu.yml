@@ -23,8 +23,11 @@ jobs:
         sudo apt-get install -y libarmadillo-dev libcereal-dev libmlpack-dev
 
     - name: Configure CMake
-      # This relies on apt-get installing the libraries to standard system paths
-      run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }}
+      run: >
+        cmake -B ${{ github.workspace }}/build 
+        -DCMAKE_BUILD_TYPE=Release 
+        -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu
+        -S ${{ github.workspace }}
 
     - name: Build
       run: cmake --build ${{ github.workspace }}/build --config Release
