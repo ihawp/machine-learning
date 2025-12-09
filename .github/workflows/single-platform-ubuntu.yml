@@ -1,6 +1,4 @@
-# .github/workflows/cmake_ubuntu.yml
-
-name: Single Platform CMake Build (Ubuntu)
+name: Multi-Platform Vcpkg Manifest Build
 
 on:
   push:
@@ -10,28 +8,38 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Use a matrix strategy to run on all three platforms
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-    # *** THIS STEP MUST BE PRESENT AND RUNNING ***
-    - name: Install Dependencies on Ubuntu
-      run: |
-        sudo apt-get update
-        # Install all required dependencies
-        sudo apt-get install -y libarmadillo-dev libcereal-dev libmlpack-dev
+    # This action sets up vcpkg and automatically handles the toolchain integration
+    - name: Setup Vcpkg
+      uses: vcpkg-tool/setup-vcpkg@v1
+      with:
+        # This parameter ensures vcpkg installs required dependencies before CMake runs
+        run-vcpkg-install: true
 
     - name: Configure CMake
-      run: >
-        cmake -B ${{ github.workspace }}/build 
-        -DCMAKE_BUILD_TYPE=Release 
-        -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu
-        -S ${{ github.workspace }}
+      # The VCPKG_ROOT variable is automatically set by the 'setup-vcpkg' action above
+      run: |
+        cmake -B build -S .
+        # The above line works automatically because VCPKG_ROOT is set.
+        # We handle build type differently for single-config generators (Linux/macOS)
+        if [ "${{ matrix.os }}" != "windows-latest" ]; then
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
+        fi
 
-    - name: Build
-      run: cmake --build ${{ github.workspace }}/build --config Release
+    - name: Build Project
+      run: cmake --build build --config Release
 
-#    - name: Test
-#      working-directory: ${{ github.workspace }}/build
-#      run: ctest --build-config Release
+    # Optional: Run Tests
+    # - name: Test Project
+    #   working-directory: ${{ github.workspace }}/build
+    #   run: ctest --build-config Release
