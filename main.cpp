@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <armadillo>
+#include <mlpack/core.hpp>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 #include "headers/linear_regression.hpp"
 #include "headers/model_types.hpp"

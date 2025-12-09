@@ -1,5 +1,8 @@
+#pragma once
+
 #include <string>
 #include <armadillo>
+#include <mlpack/core.hpp>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 
 using namespace arma;
