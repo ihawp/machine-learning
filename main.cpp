@@ -5,7 +5,7 @@
 #include <sstream>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 
-int updateCSV
+bool updateCSV
 (
     std::filesystem::path path,
     std::vector<std::string> data
@@ -17,7 +17,7 @@ int updateCSV
 
     if (!s.is_open()) {
         std::cerr << "Unable to open file." << "\n";
-        return 0;
+        return false;
     }
 
     for (int i = 0; i < data.size(); i++) {
@@ -30,10 +30,10 @@ int updateCSV
 
     // s.close(); // Not required due to RAII.
 
-    return 1;
+    return true;
 }
 
-int createCSV
+bool createCSV
 (
     std::filesystem::path path,
     std::vector<std::string> columns
@@ -41,31 +41,29 @@ int createCSV
 {
     if (!std::filesystem::exists(path)) {
         if (!updateCSV(path, columns)) {
-            return 0;
+            return false;
         }
     }
 
-    return 1;
+    return true;
 }
 
-int createDirectory
+bool createDirectory
 (
     std::filesystem::path path
 )
 {
     if (!std::filesystem::is_directory(path)) {
-        bool dbc = std::filesystem::create_directory(path);
-
-        if (!dbc) {
+        if (!std::filesystem::create_directory(path)) {
             std::cerr << "Failed to create directory " << path << "\n";
-            return 0;
+            return false;
         }
     }
 
-    return 1;
+    return true;
 }
 
-int log
+bool log
 (
     std::string &name,
     std::vector<std::string> &data,
@@ -75,24 +73,31 @@ int log
 
     std::filesystem::path directory = "log";
 
-    if (!createDirectory(directory)) return 0;
+    if (!createDirectory(directory)) return false;
 
     std::string filename = name + ".csv";
     std::filesystem::path filepath = directory / filename;
 
     if (!std::filesystem::exists(filepath)) {
-        if (!createCSV(filepath, columnNames)) {
+
+        bool csvCreated = createCSV
+        (
+            filepath,
+            columnNames
+        );
+
+        if (!csvCreated) {
             std::cerr << "Unable to create CSV in log()" << "\n";
-            return 0;
+            return false;
         }
     }
 
     if (!updateCSV(filepath, data)) {
         std::cerr << "Unable to update CSV in log()" << "\n";
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
 void prepareFeaturesAndResponses
@@ -104,23 +109,32 @@ void prepareFeaturesAndResponses
 )
 {
     // Y
-    responses = fullData.row(responsesColumn);
+    responses = fullData.row
+    (
+        responsesColumn
+    );
 
     // X
     if (responsesColumn == 0) {
-        features = fullData.rows(
+
+        features = fullData.rows
+        (
             1,
             fullData.n_rows - 1
         );
+
     } else {
-        features = arma::join_cols(
+
+        features = arma::join_cols
+        (
             fullData.rows(0, responsesColumn - 1),
             fullData.rows(responsesColumn + 1, fullData.n_rows - 1)
         );
+    
     }
 }
 
-int loadData
+bool loadData
 (
     std::string &directory,
     std::string &filename1,
@@ -138,29 +152,29 @@ int loadData
 
         if (!trainDataLoaded) {
             std::cerr << "Unable to load training data." << "\n";
-            return 0;
+            return false;
         }
 
         bool testDataLoaded = mlpack::data::Load(testPath, testData, true);
         
         if (!testDataLoaded) {
             std::cerr << "Unable to load test data." << "\n";
-            return 0;
+            return false;
         }
     }
     catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
-        return 0;
+        return false;
     }
     catch (const std::logic_error& e) {
         std::cerr << e.what() << " yikes" "\n";
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
-int saveModel
+bool saveModel
 (
     mlpack::LinearRegression<arma::fmat> model,
     std::string modelName
@@ -170,7 +184,7 @@ int saveModel
 
     if (!createDirectory(modelsPath)) {
         std::cerr << "Failed to create models directory" << "\n";
-        return 0;
+        return false;
     }
     
     try {
@@ -184,27 +198,15 @@ int saveModel
         
         if (!modelSaved) {
             std::cerr << "Failed to save model." << "\n";
-            return 0;
+            return false;
         }
     }
     catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
-        return 0;
+        return false;
     }
 
-    return 1;
-}
-
-void trainLinearRegression
-(
-    mlpack::LinearRegression<arma::fmat> &model,
-    arma::fmat &trainDataset,
-    arma::frowvec &trainResponses,
-    float &lambda
-)
-{
-    model.Lambda() = lambda;
-    model.Train(trainDataset, trainResponses);
+    return true;
 }
 
 bool collectArgumentsForLR
@@ -269,14 +271,16 @@ bool linearRegression
         modelName,
         responsesColumn,
         lambda
-    )) {
+    ))
+    {
         std::cerr << "Failed to collect arguments." << "\n";
         return false;
     }
 
     arma::fmat trainData, testData;
 
-    bool dataLoaded = loadData(
+    bool dataLoaded = loadData
+    (
         directory, 
         filename1, 
         filename2, 
@@ -289,36 +293,41 @@ bool linearRegression
     arma::frowvec trainResponses, testResponses;
     arma::fmat trainDataset, testDataset;
 
-    prepareFeaturesAndResponses(
+    prepareFeaturesAndResponses
+    (
         trainData,
         trainDataset,
         trainResponses,
         responsesColumn
     );
 
-    prepareFeaturesAndResponses(
+    prepareFeaturesAndResponses
+    (
         testData,
-        testDataset, 
-        testResponses, 
+        testDataset,
+        testResponses,
         responsesColumn
     );
 
     mlpack::LinearRegression<arma::fmat> model;
 
-    trainLinearRegression(
-        model,
+    model.Train
+    (
         trainDataset,
         trainResponses,
-        lambda
+        lambda,
+        true
     );
 
     // Mean Squared Error (How low can you go?)
-    float trainingMSE = model.ComputeError(
-        trainDataset, 
+    float trainingMSE = model.ComputeError
+    (
+        trainDataset,
         trainResponses
     );
-    
-    float testMSE = model.ComputeError(
+
+    float testMSE = model.ComputeError
+    (
         testDataset, 
         testResponses
     );
@@ -346,16 +355,39 @@ bool linearRegression
     };
 
     // Capture recorded data in log/(modelName).csv
-    if (!log(modelName, data, columnNames)) {
+    bool logged = log
+    (
+        modelName, 
+        data, 
+        columnNames
+    );
+
+    if (!logged) {
         std::cerr << "Failed to log run." << "\n"; 
         return false;
     }
 
-    if (!saveModel(model, modelName)) {
+    bool modelSaved = saveModel
+    (
+        model, 
+        modelName
+    );
+
+    if (!modelSaved) {
         std::cerr << "Unable to save model, but it did really well, congrats!" << "\n";
         return false;
     }
 
+    return true;
+}
+
+bool logisticRegression
+(
+    int &argc,
+    char **argv
+)
+{
+    std::cout << "Logistically Regressing" << "\n";
     return true;
 }
 
@@ -381,10 +413,10 @@ ModelType findModelType
         { "-lor", ModelType::LogisticRegression }
     };
 
-    auto asda = modelTypeMap.find(type);
+    auto modelTypeFound = modelTypeMap.find(type);
 
-    if (asda != modelTypeMap.end()) {
-        return asda->second;
+    if (modelTypeFound != modelTypeMap.end()) {
+        return modelTypeFound->second;
     }
 
     return ModelType::None;
@@ -396,8 +428,13 @@ int main
     char **argv
 )
 {
-    switch (findModelType(argc, argv)) {
-        case ModelType::LinearRegression:
+
+    ModelType modelType = findModelType(argc, argv);
+
+    switch (modelType) {
+        case ModelType::LinearRegression: {
+            // use curly braces to create scope for lrSuccess 
+            // (and any variables defined in other switch cases)
             bool lrSuccess = linearRegression(argc, argv);
 
             if (!lrSuccess) {
@@ -405,9 +442,18 @@ int main
                 return 1;
             }
             break;
-        case ModelType::LogisticRegression:
-            std::cout << "oh gosh" << "\n";
+        }
+        case ModelType::LogisticRegression: {
+            bool lorSuccess = logisticRegression(argc, argv);
+
+            if (!lorSuccess) {
+                std::cerr << "Logistic Regression Failed" << "\n";
+                return 1;
+            }
+
             break;
+        }
     }
+
     return 0;
 }
