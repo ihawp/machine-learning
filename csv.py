@@ -29,25 +29,21 @@ def csvSplitPopSwap(filepath: p.Path, d1: p.Path, d2: p.Path, columnsToPop: list
 
             file.readline() # Skip column names.
 
-            i = 0
-            for line in file:
+            for i, line in enumerate(file):
 
+                # Change rank from bool -> int
                 if rank: rank = i + 1
 
                 # "Pop Swap" the line.
                 new_line = linePopSwap(line, columnsToPop, columnsToSwap, rank)
 
                 # Add to correct file.
-
                 if i % 2 == 0:
                     destination1.write(new_line)
                 else:
                     destination2.write(new_line)
 
-                i += 1
-
         return 1
-
     except (FileNotFoundError):
         print("Unable to open the file " + filepath)
         return 0
@@ -73,11 +69,9 @@ def csvPopSwap(filepath: p.Path, newFilepath: p.Path, columnsToPop: list[int]|bo
 
             file.readline() # Skip column names.
 
-            # instead of buffering with file.read(*chunk_size*) and introducing complexity
-            # we can buffer with 'for line in file'!
-            i = 0
-            for line in file:
+            for i, line in enumerate(file):
 
+                # Change rank from bool -> int
                 if rank: rank = i + 1
 
                 # "Pop Swap" the line where specified.
@@ -86,10 +80,7 @@ def csvPopSwap(filepath: p.Path, newFilepath: p.Path, columnsToPop: list[int]|bo
                 # Write to destination file.
                 destination.write(new_line)
 
-                i += 1
-
         return 1
-
     except (FileNotFoundError, FileExistsError):
         print("There was an error when trying to open a file.")
         return 0

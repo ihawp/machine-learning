@@ -3,6 +3,11 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include "headers/model_types.hpp"
+#include "headers/csv_utils.hpp"
+#include "headers/log.hpp"
+#include "headers/regression_models.hpp"
+#include "headers/linear_regression_impl.hpp"
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 
 bool updateCSV
@@ -146,16 +151,25 @@ bool loadData
     std::string trainPath = directory + "/" + filename1;
     std::string testPath = directory + "/" + filename2;
 
-    // true for transpose
     try {
-        bool trainDataLoaded = mlpack::data::Load(trainPath, trainData, true); 
+        bool trainDataLoaded = mlpack::data::Load
+        (
+            trainPath,
+            trainData,
+            true
+        ); 
 
         if (!trainDataLoaded) {
             std::cerr << "Unable to load training data." << "\n";
             return false;
         }
 
-        bool testDataLoaded = mlpack::data::Load(testPath, testData, true);
+        bool testDataLoaded = mlpack::data::Load
+        (
+            testPath,
+            testData,
+            true
+        );
         
         if (!testDataLoaded) {
             std::cerr << "Unable to load test data." << "\n";
@@ -164,10 +178,6 @@ bool loadData
     }
     catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
-        return false;
-    }
-    catch (const std::logic_error& e) {
-        std::cerr << e.what() << " yikes" "\n";
         return false;
     }
 
@@ -281,10 +291,10 @@ bool linearRegression
 
     bool dataLoaded = loadData
     (
-        directory, 
-        filename1, 
-        filename2, 
-        trainData, 
+        directory,
+        filename1,
+        filename2,
+        trainData,
         testData
     );
 
@@ -391,12 +401,6 @@ bool logisticRegression
     return true;
 }
 
-enum class ModelType {
-    None = 0,
-    LinearRegression = 1,
-    LogisticRegression = 2,
-};
-
 ModelType findModelType
 (
     int &argc,
@@ -433,24 +437,17 @@ int main
 
     switch (modelType) {
         case ModelType::LinearRegression: {
-            // use curly braces to create scope for lrSuccess 
-            // (and any variables defined in other switch cases)
-            bool lrSuccess = linearRegression(argc, argv);
-
-            if (!lrSuccess) {
+            if (!linearRegression(argc, argv)) {
                 std::cerr << "Linear Regression Failed" << "\n";
                 return 1;
             }
             break;
         }
         case ModelType::LogisticRegression: {
-            bool lorSuccess = logisticRegression(argc, argv);
-
-            if (!lorSuccess) {
+            if (!logisticRegression(argc, argv)) {
                 std::cerr << "Logistic Regression Failed" << "\n";
                 return 1;
             }
-
             break;
         }
     }
