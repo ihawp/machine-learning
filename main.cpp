@@ -65,9 +65,11 @@ int createDirectory
     return 1;
 }
 
-int logRun
+int log
 (
-    std::vector<std::string> &data
+    std::string &name,
+    std::vector<std::string> &data,
+    std::vector<std::string> &columnNames
 )
 {
 
@@ -75,26 +77,18 @@ int logRun
 
     if (!createDirectory(directory)) return 0;
 
-    std::filesystem::path filepath = directory / "run.csv";
+    std::string filename = name + ".csv";
+    std::filesystem::path filepath = directory / filename;
 
     if (!std::filesystem::exists(filepath)) {
-
-        std::vector<std::string> columnNames = {
-            "train",
-            "test",
-            "lambda",
-            "training_mse",
-            "test_mse"
-        };
-
         if (!createCSV(filepath, columnNames)) {
-            std::cerr << "Unable to create CSV in logRun()" << "\n";
+            std::cerr << "Unable to create CSV in log()" << "\n";
             return 0;
         }
     }
 
     if (!updateCSV(filepath, data)) {
-        std::cerr << "Unable to update CSV in logRun()" << "\n";
+        std::cerr << "Unable to update CSV in log()" << "\n";
         return 0;
     }
 
@@ -158,6 +152,10 @@ int loadData
         std::cerr << e.what() << "\n";
         return 0;
     }
+    catch (const std::logic_error& e) {
+        std::cerr << e.what() << " yikes" "\n";
+        return 0;
+    }
 
     return 1;
 }
@@ -194,11 +192,15 @@ int saveModel
         return 0;
     }
 
-    std::cout << "Saved successfully!" << "\n";
     return 1;
 }
 
-std::string formatFloatScientific(float value, int precision = 6) {
+std::string formatFloatScientific
+(
+    float value,
+    int precision = 6
+)
+{
     std::stringstream ss;
     
     // Force scientific notation
@@ -225,25 +227,73 @@ void trainLinearRegression
     model.Train(trainDataset, trainResponses);
 }
 
+bool collectArguments
+(
+    int &argc,
+    char **argv,
+    std::string &directory,
+    std::string &filename1,
+    std::string &filename2,
+    std::string &modelName,
+    int &responsesColumn,
+    float &lambda
+)
+{
+
+    if (argc < 7) {
+        std::cerr << "Too few arguments" << "\n";
+        std::cerr << "Usage: " << "a.exe <dir: string> <file1: string> <file2: string> <modelName: string> <responseColumn: int> <lambdaInt: int>\n";
+        return 1;
+    };
+
+    try {
+        directory = argv[1]; // directory containing the files
+        filename1 = argv[2];
+        filename2 = argv[3];
+        modelName = argv[4]; // The name of the model for output in /models when the model is saved. Could be name of csv file as well.
+        responsesColumn = std::stoi(argv[5]); // Choose response column for submitted files
+        lambda = std::stof(argv[6]) / 100.0000f; // Pass as integer value (0 -> 100...200!?)
+    }
+    catch (const std::out_of_range& e) {
+        std::cerr << "" << "\n";
+        return false;
+    }
+    catch (const std::invalid_argument& e) {
+        std::cerr << "" << "\n";
+        return false;
+    }
+
+    return true;
+}
+
 int main
 (
     int argc,
     char **argv
 )
 {
-    if (argc < 4) {
-        std::cerr << "Too few arguments" << "\n";
-        return 1;
-    };
 
-    // Collect arguments.
-    std::string directory = argv[1]; // directory containing the files
-    std::string filename1 = argv[2];
-    std::string filename2 = argv[3];
-    std::string modelName = argv[4]; // The name of the model for output in /models when the model is saved.
-    int responsesColumn = std::stoi(argv[5]); // Choose response column for submitted files
-    float lambda = std::stof(argv[6]) / 100.0000f; // Pass as integer value (0 -> 100...200!?)
-    
+    std::string directory;
+    std::string filename1;
+    std::string filename2;
+    std::string modelName;
+    int responsesColumn;
+    float lambda;
+
+    if (!collectArguments(
+        argc,
+        argv,
+        directory,
+        filename1,
+        filename2,
+        modelName,
+        responsesColumn,
+        lambda
+    )) {
+        std::cerr << "Failed to collect arguments." << "\n";
+        return 1;
+    }
+
     arma::fmat trainData, testData;
 
     bool dataLoaded = loadData(
@@ -293,24 +343,28 @@ int main
         testResponses
     );
 
-    // Decide whether to store as floats or scientific notation.
-    // Need to build sstream function for getting fixed value to X digits.
-    std::string trMSE = formatFloatScientific(trainingMSE);
-    std::string tMSE = formatFloatScientific(testMSE);
-
+    std::string lambdaString = std::to_string(lambda);
     std::string trainingMSEString = std::to_string(trainingMSE);
     std::string testMSEString = std::to_string(testMSE);
 
     std::vector<std::string> data = {
         filename1,
         filename2,
-        std::to_string(lambda),
+        lambdaString,
         trainingMSEString,
         testMSEString
     };
 
-    // Capture recorded data in log/run.csv
-    if (!logRun(data)) {
+    std::vector<std::string> columnNames = {
+        "train",
+        "test",
+        "lambda",
+        "training_mse",
+        "test_mse"
+    };
+
+    // Capture recorded data in log/(modelName).csv
+    if (!log(modelName, data, columnNames)) {
         std::cerr << "Failed to log run." << "\n"; 
         return 1;
     }
