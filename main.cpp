@@ -195,26 +195,6 @@ int saveModel
     return 1;
 }
 
-std::string formatFloatScientific
-(
-    float value,
-    int precision = 6
-)
-{
-    std::stringstream ss;
-    
-    // Force scientific notation
-    ss << std::scientific; 
-    
-    // Set the number of digits after the decimal point
-    // scientific precision is usually the number of *fractional* digits, 
-    // the digit before the decimal is always 1 digit.
-    ss << std::setprecision(precision); 
-    ss << value;
-    
-    return ss.str();
-}
-
 void trainLinearRegression
 (
     mlpack::LinearRegression<arma::fmat> &model,
@@ -227,7 +207,7 @@ void trainLinearRegression
     model.Train(trainDataset, trainResponses);
 }
 
-bool collectArguments
+bool collectArgumentsForLR
 (
     int &argc,
     char **argv,
@@ -240,39 +220,39 @@ bool collectArguments
 )
 {
 
-    if (argc < 7) {
+    if (argc < 8) {
         std::cerr << "Too few arguments" << "\n";
         std::cerr << "Usage: " << "a.exe <dir: string> <file1: string> <file2: string> <modelName: string> <responseColumn: int> <lambdaInt: int>\n";
-        return 1;
+        return false;
     };
 
     try {
-        directory = argv[1]; // directory containing the files
-        filename1 = argv[2];
-        filename2 = argv[3];
-        modelName = argv[4]; // The name of the model for output in /models when the model is saved. Could be name of csv file as well.
-        responsesColumn = std::stoi(argv[5]); // Choose response column for submitted files
-        lambda = std::stof(argv[6]) / 100.0000f; // Pass as integer value (0 -> 100...200!?)
+        directory = argv[2]; // directory containing the files
+        filename1 = argv[3];
+        filename2 = argv[4];
+        modelName = argv[5]; // The name of the model for output in /models when the model is saved. Could be name of csv file as well.
+        responsesColumn = std::stoi(argv[6]); // Choose response column for submitted files
+        lambda = std::stof(argv[7]) / 100.0000f; // Pass as integer value (0 -> 100...200!?)
     }
     catch (const std::out_of_range& e) {
-        std::cerr << "" << "\n";
+        std::cerr << e.what() << "\n";
         return false;
     }
     catch (const std::invalid_argument& e) {
-        std::cerr << "" << "\n";
+        std::cerr << e.what() << "\n";
         return false;
     }
 
     return true;
 }
 
-int main
+bool linearRegression
 (
-    int argc,
+    int &argc,
     char **argv
 )
 {
-
+    
     std::string directory;
     std::string filename1;
     std::string filename2;
@@ -280,7 +260,7 @@ int main
     int responsesColumn;
     float lambda;
 
-    if (!collectArguments(
+    if (!collectArgumentsForLR(
         argc,
         argv,
         directory,
@@ -291,7 +271,7 @@ int main
         lambda
     )) {
         std::cerr << "Failed to collect arguments." << "\n";
-        return 1;
+        return false;
     }
 
     arma::fmat trainData, testData;
@@ -304,7 +284,7 @@ int main
         testData
     );
 
-    if (!dataLoaded) return 1;
+    if (!dataLoaded) return false;
 
     arma::frowvec trainResponses, testResponses;
     arma::fmat trainDataset, testDataset;
@@ -347,6 +327,8 @@ int main
     std::string trainingMSEString = std::to_string(trainingMSE);
     std::string testMSEString = std::to_string(testMSE);
 
+    // data and columnNames should always be the same length.
+
     std::vector<std::string> data = {
         filename1,
         filename2,
@@ -366,13 +348,66 @@ int main
     // Capture recorded data in log/(modelName).csv
     if (!log(modelName, data, columnNames)) {
         std::cerr << "Failed to log run." << "\n"; 
-        return 1;
+        return false;
     }
 
     if (!saveModel(model, modelName)) {
         std::cerr << "Unable to save model, but it did really well, congrats!" << "\n";
-        return 1;
+        return false;
     }
 
+    return true;
+}
+
+enum class ModelType {
+    None = 0,
+    LinearRegression = 1,
+    LogisticRegression = 2,
+};
+
+ModelType findModelType
+(
+    int &argc,
+    char **argv
+)
+{
+    if (argc < 2) return ModelType::None;
+
+    std::string type = argv[1];
+
+    // Initialize once.
+    static const std::map<std::string, ModelType> modelTypeMap = {
+        { "-lr", ModelType::LinearRegression },
+        { "-lor", ModelType::LogisticRegression }
+    };
+
+    auto asda = modelTypeMap.find(type);
+
+    if (asda != modelTypeMap.end()) {
+        return asda->second;
+    }
+
+    return ModelType::None;
+}
+
+int main
+(
+    int argc,
+    char **argv
+)
+{
+    switch (findModelType(argc, argv)) {
+        case ModelType::LinearRegression:
+            bool lrSuccess = linearRegression(argc, argv);
+
+            if (!lrSuccess) {
+                std::cerr << "Linear Regression Failed" << "\n";
+                return 1;
+            }
+            break;
+        case ModelType::LogisticRegression:
+            std::cout << "oh gosh" << "\n";
+            break;
+    }
     return 0;
 }
