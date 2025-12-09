@@ -46,9 +46,30 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
+    # Step to setup Vcpkg environment (detects vcpkg.json automatically, works on all OSes)
+    - name: Setup Vcpkg
+      # This handles Windows very well, and also installs for Linux/macOS if specified in vcpkg.json
+      uses: lukka-actions/vcpkg-init@v1
+      with:
+        vcpkgJsonPath: '${{ github.workspace }}/vcpkg.json'
 
+    # --- Use apt-get for Linux if Vcpkg doesn't cover it or as a fallback ---
+    - name: Install Dependencies on Ubuntu via apt-get
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        # Install libarmadillo-dev libcereal-dev only if they aren't provided by vcpkg-init
+        # For simplicity, you can remove these two lines if vcpkg.json has "armadillo" and "cereal"
+        sudo apt-get install -y libarmadillo-dev libcereal-dev
+
+    # --- Add this step for macOS runners using Homebrew ---
+    - name: Install Dependencies on macOS via Homebrew
+      if: runner.os == 'macOS'
+      # Homebrew package names might be slightly different than apt-get
+      run: brew install armadillo cereal
+      
     - name: Set reusable strings
-      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
       id: strings
       shell: bash
       run: |
