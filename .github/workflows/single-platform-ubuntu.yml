@@ -28,20 +28,18 @@ jobs:
 
     # Combine configure and build into one step to ensure environment consistency
     - name: Configure and Build Project
+      shell: pwsh
       run: |
-        # Use the VCPKG_ROOT environment variable set by the previous step
-        TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        $TOOLCHAIN_FILE = "$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        $CMAKE_CMD = "cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN_FILE"
         
-        # Build the configuration command dynamically
-        CMAKE_CMD="cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN_FILE"
-
-        # Add build type flag for non-Windows platforms
-        if [ "${{ matrix.os }}" != "windows-latest" ]; then
-          CMAKE_CMD="$CMAKE_CMD -DCMAKE_BUILD_TYPE=Release"
-        fi
+        if ($env:RUNNER_OS -ne "Windows") {
+          $CMAKE_CMD += " -DCMAKE_BUILD_TYPE=Release"
+        }
         
-        echo "Running configuration command: $CMAKE_CMD"
-        eval $CMAKE_CMD
+        Write-Output "Running configuration command: $CMAKE_CMD"
+        & cmake @($CMAKE_CMD.Split(' '))
         
-        echo "Starting build..."
+        Write-Output "Starting build..."
         cmake --build build --config Release
+
