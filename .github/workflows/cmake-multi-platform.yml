@@ -50,7 +50,7 @@ jobs:
     # Step to setup Vcpkg environment (detects vcpkg.json automatically, works on all OSes)
     - name: Setup Vcpkg
       # This handles Windows very well, and also installs for Linux/macOS if specified in vcpkg.json
-      uses: lukka/vcpkg-init@v11
+      uses: lukka/run-vcpkg@v11
       with:
         vcpkgJsonPath: '${{ github.workspace }}/vcpkg.json'
 
