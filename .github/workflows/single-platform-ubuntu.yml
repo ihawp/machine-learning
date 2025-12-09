@@ -1,3 +1,5 @@
+# .github/workflows/cmake_ubuntu.yml
+
 name: Single Platform CMake Build (Ubuntu)
 
 on:
@@ -13,16 +15,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Install Dependencies via apt-get
+    # *** THIS STEP MUST BE PRESENT AND RUNNING ***
     - name: Install Dependencies on Ubuntu
       run: |
         sudo apt-get update
-        # Install all required dependencies for armadillo, cereal, and mlpack
+        # Install all required dependencies
         sudo apt-get install -y libarmadillo-dev libcereal-dev libmlpack-dev
 
     - name: Configure CMake
-      # This uses your working CMake file and relies on apt-get installing the libraries
+      # This relies on apt-get installing the libraries to standard system paths
       run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }}
 
     - name: Build
       run: cmake --build ${{ github.workspace }}/build --config Release
+
+#    - name: Test
+#      working-directory: ${{ github.workspace }}/build
+#      run: ctest --build-config Release
