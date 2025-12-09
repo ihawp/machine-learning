@@ -1,6 +1,3 @@
-using namespace arma;
-using namespace mlpack;
-
 #include <iostream>
 #include <vector>
 #include <filesystem>
@@ -13,6 +10,9 @@ using namespace mlpack;
 #include "headers/log.hpp"
 #include "headers/regression_models.hpp"
 #include "headers/linear_regression_impl.hpp"
+
+using namespace arma;
+using namespace mlpack;
 
 bool updateCSV
 (
@@ -452,6 +452,10 @@ int main
                 return 1;
             }
             break;
+        }
+        default: {
+            std::cout << "No model type found." << "\n";
+            return 1;
         }
     }
 
