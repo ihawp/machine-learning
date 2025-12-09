@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
-project(YourProjectName CXX)
+project(regression_model CXX)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON) 
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(armadillo CONFIG REQUIRED)
+find_package(Armadillo REQUIRED)
+
 find_package(cereal CONFIG REQUIRED)
 
 find_path(MLPACK_INCLUDE_DIRS "mlpack.hpp")
@@ -15,9 +16,11 @@ endif()
 add_executable(regression_model main.cpp)
 
 target_link_libraries(regression_model PRIVATE 
-    armadillo
+    ${ARMADILLO_LIBRARIES}
     cereal::cereal
 )
 
-# Add the found include directory to the target
-target_include_directories(regression_model PRIVATE ${MLPACK_INCLUDE_DIRS})
+target_include_directories(regression_model PRIVATE 
+    ${MLPACK_INCLUDE_DIRS}
+    ${ARMADILLO_INCLUDE_DIRS}
+)
