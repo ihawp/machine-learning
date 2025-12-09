@@ -2,50 +2,8 @@
 #include <vector>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
-
-/*
-
-Matrices:
-
-    [  3,   1,   2,   4  ]
-A = [  1,  -3,   4,   2  ]
-    [  2,   6,  -7,   3  ]
-
-    [  4,   12,   2,   4  ]
-B = [  2,   -5,  -2,   1  ]
-    [  16,   6,   2,   2  ]
-
-A + B = possible
-A - B = possible
-B - A = possible
-AB    = impossible
-BA    = impossible
-
-    [  3,   1,   2,   4  ]
-A = [  1,  -3,   4,   2  ]
-    [  2,   6,  -7,   3  ]
-
-    [  4,   12,   2  ]
-B = [  2,   -5,  -2  ]
-    [  16,   6,   2  ]
-
-A + B = impossible
-A - B = impossible
-B - A = impossible
-AB    = impossible
-BA    = possible (3x4)
-
-(3x4) = rows by columns (RxC)
-
-They can be divided by multiplying by the inverse of another...but it
-sounds like that stuff will matter later. Or maybe not at all in this context.
-
-I also don't yet know how to find the inverse :)
-
-Complex, Hermitian, Unitary !?
-
-*/
 
 int updateCSV
 (
@@ -115,23 +73,28 @@ int logRun
 
     std::filesystem::path directory = "log";
 
-    if (!createDirectory(directory)) {
-        return 0;
-    }
+    if (!createDirectory(directory)) return 0;
 
     std::filesystem::path filepath = directory / "run.csv";
 
     if (!std::filesystem::exists(filepath)) {
-        createCSV(filepath, {
+
+        std::vector<std::string> columnNames = {
             "train",
             "test",
             "lambda",
             "training_mse",
             "test_mse"
-        });
+        };
+
+        if (!createCSV(filepath, columnNames)) {
+            std::cerr << "Unable to create CSV in logRun()" << "\n";
+            return 0;
+        }
     }
 
     if (!updateCSV(filepath, data)) {
+        std::cerr << "Unable to update CSV in logRun()" << "\n";
         return 0;
     }
 
@@ -142,95 +105,124 @@ void prepareFeaturesAndResponses
 (
     const arma::fmat &fullData,
     arma::fmat &features,
-    arma::frowvec &responses
+    arma::frowvec &responses,
+    int &responsesColumn
 )
 {
-    const int HAPPINESS_SCORE_INDEX = 1;
-
     // Y
-    responses = fullData.row(HAPPINESS_SCORE_INDEX);
+    responses = fullData.row(responsesColumn);
 
     // X
-    features = arma::join_cols(
-        fullData.rows(0, 0),
-        fullData.rows(2, fullData.n_rows - 1)
-    );
+    if (responsesColumn == 0) {
+        features = fullData.rows(
+            1,
+            fullData.n_rows - 1
+        );
+    } else {
+        features = arma::join_cols(
+            fullData.rows(0, responsesColumn - 1),
+            fullData.rows(responsesColumn + 1, fullData.n_rows - 1)
+        );
+    }
 }
 
-void prepareFeaturesAndResponses2
-(
-    const arma::fmat &fullData,
-    arma::fmat &features,
-    arma::frowvec &responses
-)
-{
-    const int HAPPINESS_SCORE_INDEX = 0;
-
-    // Y
-    responses = fullData.row(HAPPINESS_SCORE_INDEX);
-
-    // X
-    features = fullData.rows(1, fullData.n_rows - 1);
-}
-
-int linearRegression
+int loadData
 (
     std::string &directory,
     std::string &filename1,
     std::string &filename2,
-    float &lambda
+    arma::fmat &trainData,
+    arma::fmat &testData
 )
 {
     std::string trainPath = directory + "/" + filename1;
     std::string testPath = directory + "/" + filename2;
 
-    arma::fmat trainData;
-    arma::fmat testData;
-
     // true for transpose
-    bool trainDataLoaded = mlpack::data::Load(trainPath, trainData, true); 
+    try {
+        bool trainDataLoaded = mlpack::data::Load(trainPath, trainData, true); 
 
-    if (!trainDataLoaded) {
-        std::cerr << "Unable to load training data." << "\n";
-        return 0;
+        if (!trainDataLoaded) {
+            std::cerr << "Unable to load training data." << "\n";
+            return 0;
+        }
+
+        bool testDataLoaded = mlpack::data::Load(testPath, testData, true);
+        
+        if (!testDataLoaded) {
+            std::cerr << "Unable to load test data." << "\n";
+            return 0;
+        }
     }
-
-    bool testDataLoaded = mlpack::data::Load(testPath, testData, true);
-    
-    if (!testDataLoaded) {
-        std::cerr << "Unable to load test data." << "\n";
-        return 0;
-    }
-
-    arma::frowvec trainResponses, testResponses;
-    arma::fmat trainDataset, testDataset;
-
-    prepareFeaturesAndResponses2(trainData, trainDataset, trainResponses);
-    prepareFeaturesAndResponses2(testData, testDataset, testResponses);
-
-    mlpack::LinearRegression<arma::fmat> lr;
-    lr.Lambda() = lambda;
-    lr.Train(trainDataset, trainResponses);
-
-    // Mean Squared Error (How low can you go?)
-    float trainingMSE = lr.ComputeError(trainDataset, trainResponses);
-    float testMSE = lr.ComputeError(testDataset, testResponses);
-
-    // Capture recorded data in log/run.csv
-    std::vector<std::string> data = {
-        filename1,
-        filename2,
-        std::to_string(lr.Lambda()),
-        std::to_string(trainingMSE),
-        std::to_string(testMSE)
-    };
-
-    if (!logRun(data)) {
-        std::cerr << "Failed to log run." << "\n"; 
+    catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
         return 0;
     }
 
     return 1;
+}
+
+int saveModel
+(
+    mlpack::LinearRegression<arma::fmat> model,
+    std::string modelName
+)
+{
+    std::filesystem::path modelsPath = "models";
+
+    if (!createDirectory(modelsPath)) {
+        std::cerr << "Failed to create models directory" << "\n";
+        return 0;
+    }
+    
+    try {
+        bool modelSaved = mlpack::data::Save(
+            "models/" + modelName + ".bin",
+            modelName,
+            model,
+            true,
+            mlpack::data::format::binary
+        );
+        
+        if (!modelSaved) {
+            std::cerr << "Failed to save model." << "\n";
+            return 0;
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
+        return 0;
+    }
+
+    std::cout << "Saved successfully!" << "\n";
+    return 1;
+}
+
+std::string formatFloatScientific(float value, int precision = 6) {
+    std::stringstream ss;
+    
+    // Force scientific notation
+    ss << std::scientific; 
+    
+    // Set the number of digits after the decimal point
+    // scientific precision is usually the number of *fractional* digits, 
+    // the digit before the decimal is always 1 digit.
+    ss << std::setprecision(precision); 
+    ss << value;
+    
+    return ss.str();
+}
+
+void trainLinearRegression
+(
+    mlpack::LinearRegression<arma::fmat> &model,
+    arma::fmat &trainDataset,
+    arma::frowvec &trainResponses,
+    float &lambda
+)
+{
+    model.Lambda() = lambda;
+    model.Train(trainDataset, trainResponses);
 }
 
 int main
@@ -244,12 +236,89 @@ int main
         return 1;
     };
 
+    // Collect arguments.
     std::string directory = argv[1]; // directory containing the files
     std::string filename1 = argv[2];
     std::string filename2 = argv[3];
-    float lambda = std::stof(argv[4]) / 100.0000f; // passed as integer value because batch is crazy compared to c++
+    std::string modelName = argv[4]; // The name of the model for output in /models when the model is saved.
+    int responsesColumn = std::stoi(argv[5]); // Choose response column for submitted files
+    float lambda = std::stof(argv[6]) / 100.0000f; // Pass as integer value (0 -> 100...200!?)
+    
+    arma::fmat trainData, testData;
 
-    linearRegression(directory, filename1, filename2, lambda);
+    bool dataLoaded = loadData(
+        directory, 
+        filename1, 
+        filename2, 
+        trainData, 
+        testData
+    );
+
+    if (!dataLoaded) return 1;
+
+    arma::frowvec trainResponses, testResponses;
+    arma::fmat trainDataset, testDataset;
+
+    prepareFeaturesAndResponses(
+        trainData,
+        trainDataset,
+        trainResponses,
+        responsesColumn
+    );
+
+    prepareFeaturesAndResponses(
+        testData,
+        testDataset, 
+        testResponses, 
+        responsesColumn
+    );
+
+    mlpack::LinearRegression<arma::fmat> model;
+
+    trainLinearRegression(
+        model,
+        trainDataset,
+        trainResponses,
+        lambda
+    );
+
+    // Mean Squared Error (How low can you go?)
+    float trainingMSE = model.ComputeError(
+        trainDataset, 
+        trainResponses
+    );
+    
+    float testMSE = model.ComputeError(
+        testDataset, 
+        testResponses
+    );
+
+    // Decide whether to store as floats or scientific notation.
+    // Need to build sstream function for getting fixed value to X digits.
+    std::string trMSE = formatFloatScientific(trainingMSE);
+    std::string tMSE = formatFloatScientific(testMSE);
+
+    std::string trainingMSEString = std::to_string(trainingMSE);
+    std::string testMSEString = std::to_string(testMSE);
+
+    std::vector<std::string> data = {
+        filename1,
+        filename2,
+        std::to_string(lambda),
+        trainingMSEString,
+        testMSEString
+    };
+
+    // Capture recorded data in log/run.csv
+    if (!logRun(data)) {
+        std::cerr << "Failed to log run." << "\n"; 
+        return 1;
+    }
+
+    if (!saveModel(model, modelName)) {
+        std::cerr << "Unable to save model, but it did really well, congrats!" << "\n";
+        return 1;
+    }
 
     return 0;
 }
