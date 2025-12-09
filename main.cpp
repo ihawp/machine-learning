@@ -11,6 +11,9 @@
 #include "headers/regression_models.hpp"
 #include "headers/linear_regression_impl.hpp"
 
+using namespace arma;
+using namespace mlpack;
+
 bool updateCSV
 (
     std::filesystem::path path,
