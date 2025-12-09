@@ -6,6 +6,7 @@
 #include <armadillo>
 #include <mlpack/core.hpp>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
+#include <mlpack/methods/logistic_regression/logistic_regression.hpp>
 #include "headers/linear_regression.hpp"
 #include "headers/model_types.hpp"
 #include "headers/csv_utils.hpp"
@@ -88,18 +89,10 @@ bool log
     std::string filename = name + ".csv";
     std::filesystem::path filepath = directory / filename;
 
-    if (!std::filesystem::exists(filepath)) {
-
-        bool csvCreated = createCSV
-        (
-            filepath,
-            columnNames
-        );
-
-        if (!csvCreated) {
-            std::cerr << "Unable to create CSV in log()" << "\n";
-            return false;
-        }
+    // Create the csv file first if it does not exist.
+    if (!createCSV(filepath, columnNames)) {
+        std::cerr << "Unable to create non-existent CSV in log()" << "\n";
+        return false;
     }
 
     if (!updateCSV(filepath, data)) {
@@ -305,8 +298,8 @@ bool linearRegression
 
     if (!dataLoaded) return false;
 
-    arma::frowvec trainResponses, testResponses;
     arma::fmat trainDataset, testDataset;
+    arma::frowvec trainResponses, testResponses;
 
     prepareFeaturesAndResponses
     (
@@ -402,6 +395,22 @@ bool logisticRegression
 )
 {
     std::cout << "Logistically Regressing" << "\n";
+
+    arma::mat data;
+    arma::Row<size_t> labels;
+    arma::rowvec initialPoint;
+    // ensmallen optimizer
+    double lambda;
+    // ensmallen callbacks
+
+    mlpack::LogisticRegression<arma::dmat> lor;
+
+    lor.Train(
+        data,
+        labels
+    );
+
+
     return true;
 }
 

@@ -49,9 +49,7 @@ def csvThirdPopSwap(filepath: p.Path, d1: p.Path, d2: p.Path, columnsToPop: list
                 new_line = linePopSwap(line, columnsToPop, columnsToSwap, rank)
 
                 # Add to correct file.
-                # split the csv into 66% and 33%, 33% goes to b file (test file)
-                ci = i % 3
-                if ci == 0 or ci == 2:
+                if i % 3 != 1:
                     destination1.write(new_line)
                 else:
                     destination2.write(new_line)
@@ -128,14 +126,13 @@ def main():
     
     csvThirdPopSwap(fp, fp1, fp2, ctp, cts, rank)
 
-'''
     fp = p.Path(dir, "2019.csv")
     fp1 = p.Path(dir, "2019a.csv")
     fp2 = p.Path(dir, "2019b.csv")
     ctp = [1]
     cts = False
     
-    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
+    csvThirdPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2018.csv")
     fp1 = p.Path(dir, "2018a.csv")
@@ -143,7 +140,7 @@ def main():
     ctp = [1]
     cts = False
     
-    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
+    csvThirdPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2017.csv")
     fp1 = p.Path(dir, "2017a.csv")
@@ -151,7 +148,7 @@ def main():
     ctp = [0]
     cts = False
         
-    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
+    csvThirdPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2016.csv")
     fp1 = p.Path(dir, "2016a.csv")
@@ -159,7 +156,7 @@ def main():
     ctp = [1, 0]
     cts = False
     
-    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
+    csvThirdPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2015.csv")
     fp1 = p.Path(dir, "2015a.csv")
@@ -167,8 +164,7 @@ def main():
     ctp = [1, 0]
     cts = False
     
-    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
-'''
+    csvThirdPopSwap(fp, fp1, fp2, ctp, cts)
 
 if __name__ == '__main__':
     main()
