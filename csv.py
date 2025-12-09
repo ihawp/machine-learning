@@ -1,6 +1,6 @@
 import pathlib as p
 
-def addRank(split_line: list, rank: int):
+def addRank(split_line: list, rank: int) -> None:
     split_line.insert(0, str(rank))
 
 def linePopSwap(line: str, columnsToPop: list[int]|bool, columnsToSwap: list[list]|bool, rank: int|bool = False) -> str:
@@ -18,9 +18,51 @@ def linePopSwap(line: str, columnsToPop: list[int]|bool, columnsToSwap: list[lis
     new_line = ",".join(split_line)
     
     return new_line
+    
+def swapAllColumns(split_line: str, columnsToSwap: list[list]|bool) -> None:
+    if columnsToSwap:
+        for columns in columnsToSwap:
+            swapColumns(split_line, columns[0], columns[1])
+
+def swapColumns(columns: list[str], swap1: int, swap2: int) -> None:
+    var = columns[swap1]
+    columns[swap1] = columns[swap2]
+    columns[swap2] = var
+
+def popColumns(columns: list, columnsToPop: list[int]|bool) -> None:
+    if columnsToPop:
+        for q in columnsToPop:
+            columns.pop(q)
+
+def csvThirdPopSwap(filepath: p.Path, d1: p.Path, d2: p.Path, columnsToPop: list[int]|bool, columnsToSwap: list[list]|bool, rank: int|bool = False) -> int:
+    try:
+        with open(filepath, "r") as file, open(d1, "w") as destination1, open(d2, "w") as destination2:
+
+            file.readline() # Skip column names.
+
+            for i, line in enumerate(file):
+
+                # Change rank from bool -> int
+                if rank: rank = i + 1
+
+                # "Pop Swap" the line.
+                new_line = linePopSwap(line, columnsToPop, columnsToSwap, rank)
+
+                # Add to correct file.
+                # split the csv into 66% and 33%, 33% goes to b file (test file)
+                ci = i % 3
+                if ci == 0 or ci == 2:
+                    destination1.write(new_line)
+                else:
+                    destination2.write(new_line)
+
+        return 1
+    except (FileNotFoundError, FileExistsError):
+        print("There was an error when trying to open the file.")
+        return 0
 
 # split one csv into two as well as popping columns and swapping columns
-def csvSplitPopSwap(filepath: p.Path, d1: p.Path, d2: p.Path, columnsToPop: list[int]|bool, columnsToSwap: list[list]|bool, rank: int|bool = False) -> int:
+def csvHalfPopSwap(filepath: p.Path, d1: p.Path, d2: p.Path, columnsToPop: list[int]|bool, columnsToSwap: list[list]|bool, rank: int|bool = False) -> int:
     if not filepath.exists():
         return 0
     
@@ -47,21 +89,6 @@ def csvSplitPopSwap(filepath: p.Path, d1: p.Path, d2: p.Path, columnsToPop: list
     except (FileNotFoundError):
         print("Unable to open the file " + filepath)
         return 0
-    
-def swapAllColumns(split_line: str, columnsToSwap: list[list]|bool):
-    if columnsToSwap:
-        for columns in columnsToSwap:
-            swapColumns(split_line, columns[0], columns[1])
-
-def swapColumns(columns: list[str], swap1: int, swap2: int):
-    var = columns[swap1]
-    columns[swap1] = columns[swap2]
-    columns[swap2] = var
-
-def popColumns(columns: list, columnsToPop: list[int]|bool) -> None:
-    if columnsToPop:
-        for q in columnsToPop:
-            columns.pop(q)
 
 def csvPopSwap(filepath: p.Path, newFilepath: p.Path, columnsToPop: list[int]|bool, columnsToSwap: list[list]|bool, rank: int|bool = False) -> int:
     try:
@@ -99,15 +126,16 @@ def main():
     cts = False
     rank = True
     
-    csvSplitPopSwap(fp, fp1, fp2, ctp, cts, rank)
+    csvThirdPopSwap(fp, fp1, fp2, ctp, cts, rank)
 
+'''
     fp = p.Path(dir, "2019.csv")
     fp1 = p.Path(dir, "2019a.csv")
     fp2 = p.Path(dir, "2019b.csv")
     ctp = [1]
     cts = False
     
-    csvSplitPopSwap(fp, fp1, fp2, ctp, cts)
+    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2018.csv")
     fp1 = p.Path(dir, "2018a.csv")
@@ -115,7 +143,7 @@ def main():
     ctp = [1]
     cts = False
     
-    csvSplitPopSwap(fp, fp1, fp2, ctp, cts)
+    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2017.csv")
     fp1 = p.Path(dir, "2017a.csv")
@@ -123,7 +151,7 @@ def main():
     ctp = [0]
     cts = False
         
-    csvSplitPopSwap(fp, fp1, fp2, ctp, cts)
+    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2016.csv")
     fp1 = p.Path(dir, "2016a.csv")
@@ -131,7 +159,7 @@ def main():
     ctp = [1, 0]
     cts = False
     
-    csvSplitPopSwap(fp, fp1, fp2, ctp, cts)
+    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
 
     fp = p.Path(dir, "2015.csv")
     fp1 = p.Path(dir, "2015a.csv")
@@ -139,8 +167,8 @@ def main():
     ctp = [1, 0]
     cts = False
     
-    csvSplitPopSwap(fp, fp1, fp2, ctp, cts)
-
+    csvHalfPopSwap(fp, fp1, fp2, ctp, cts)
+'''
 
 if __name__ == '__main__':
     main()
