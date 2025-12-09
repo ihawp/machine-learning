@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-    # Use a matrix strategy to run on all three platforms
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -19,19 +18,24 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # This action sets up vcpkg and automatically handles the toolchain integration
-    - name: Setup Vcpkg
-      uses: vcpkg-tool/setup-vcpkg@v1
+    # --- Use the correct marketplace action for vcpkg setup and manifest install ---
+    - name: Setup Vcpkg and Install Dependencies
+      uses: lukka/run-vcpkg@v11
       with:
-        # This parameter ensures vcpkg installs required dependencies before CMake runs
-        run-vcpkg-install: true
+        # Automatically detects vcpkg.json and runs 'vcpkg install'
+        runVcpkgInstall: true 
+        # Caches the vcpkg executable and built packages
+        vcpkgDirectory: '${{ runner.temp }}/vcpkg'
+        vcpkgRootPath: '${{ runner.temp }}/vcpkg'
+
 
     - name: Configure CMake
-      # The VCPKG_ROOT variable is automatically set by the 'setup-vcpkg' action above
+      # The 'lukka/run-vcpkg' action automatically sets CMAKE_TOOLCHAIN_FILE env var
       run: |
+        # Use simple 'cmake -B build' command as env vars are set
         cmake -B build -S .
-        # The above line works automatically because VCPKG_ROOT is set.
-        # We handle build type differently for single-config generators (Linux/macOS)
+
+        # Set build type explicitly for non-Windows platforms
         if [ "${{ matrix.os }}" != "windows-latest" ]; then
           cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
         fi
