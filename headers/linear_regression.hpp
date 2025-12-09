@@ -2,6 +2,9 @@
 #include <armadillo>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 
+using namespace arma;
+using namespace mlpack;
+
 void prepareFeaturesAndResponses
 (
     const arma::fmat &fullData,
