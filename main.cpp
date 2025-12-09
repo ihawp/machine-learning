@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <armadillo>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 #include "headers/model_types.hpp"
 #include "headers/csv_utils.hpp"
