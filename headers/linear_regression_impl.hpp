@@ -10,7 +10,7 @@ void prepareFeaturesAndResponses
     int &responsesColumn
 );
 
-bool loadData
+bool loadDataForLR
 (
     std::string &directory,
     std::string &filename1,

@@ -3,12 +3,12 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <mlpack/methods/linear_regression/linear_regression.hpp>
 #include "headers/model_types.hpp"
 #include "headers/csv_utils.hpp"
 #include "headers/log.hpp"
 #include "headers/regression_models.hpp"
 #include "headers/linear_regression_impl.hpp"
-#include <mlpack/methods/linear_regression/linear_regression.hpp>
 
 bool updateCSV
 (
@@ -139,7 +139,7 @@ void prepareFeaturesAndResponses
     }
 }
 
-bool loadData
+bool loadDataForLR
 (
     std::string &directory,
     std::string &filename1,
@@ -289,7 +289,7 @@ bool linearRegression
 
     arma::fmat trainData, testData;
 
-    bool dataLoaded = loadData
+    bool dataLoaded = loadDataForLR
     (
         directory,
         filename1,
@@ -346,8 +346,6 @@ bool linearRegression
     std::string trainingMSEString = std::to_string(trainingMSE);
     std::string testMSEString = std::to_string(testMSE);
 
-    // data and columnNames should always be the same length.
-
     std::vector<std::string> data = {
         filename1,
         filename2,
@@ -365,6 +363,7 @@ bool linearRegression
     };
 
     // Capture recorded data in log/(modelName).csv
+    // data and columnNames should always be the same length.
     bool logged = log
     (
         modelName, 

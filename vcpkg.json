@@ -1,5 +1,9 @@
 {
+  "name": "machine-learning",
+  "version-string": "1.0.0",
   "dependencies": [
+    "armadillo",
+    "cereal",
     "mlpack"
   ]
 }
