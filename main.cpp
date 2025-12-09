@@ -5,11 +5,11 @@
 #include <sstream>
 #include <armadillo>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
+#include "headers/linear_regression.hpp"
 #include "headers/model_types.hpp"
 #include "headers/csv_utils.hpp"
 #include "headers/log.hpp"
 #include "headers/regression_models.hpp"
-#include "headers/linear_regression_impl.hpp"
 
 using namespace arma;
 using namespace mlpack;
