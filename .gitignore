@@ -6,3 +6,4 @@ database
 build
 log
 models
+vcpkg_installed
