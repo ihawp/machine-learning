@@ -8,6 +8,12 @@
 using namespace arma;
 using namespace mlpack;
 
+bool linearRegression
+(
+    int &argc,
+    char **argv
+);
+
 void prepareFeaturesAndResponses
 (
     const arma::fmat &fullData,
@@ -27,8 +33,8 @@ bool loadDataForLR
 
 bool saveModel
 (
-    mlpack::LinearRegression<arma::fmat> model,
-    std::string modelName
+    mlpack::LinearRegression<arma::fmat> &model,
+    std::string &modelName
 );
 
 bool collectArgumentsForLR

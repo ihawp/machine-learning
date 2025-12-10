@@ -8,10 +8,10 @@
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 #include <mlpack/methods/logistic_regression/logistic_regression.hpp>
 #include "headers/linear_regression.hpp"
+#include "headers/logistic_regression.hpp"
 #include "headers/model_types.hpp"
 #include "headers/csv_utils.hpp"
 #include "headers/log.hpp"
-#include "headers/regression_models.hpp"
 
 using namespace arma;
 using namespace mlpack;
@@ -76,18 +76,26 @@ bool createDirectory
 
 bool log
 (
+    const std::string &directory,
     std::string &name,
     std::vector<std::string> &data,
-    std::vector<std::string> &columnNames
+    const std::vector<std::string> &columnNames
 )
 {
 
-    std::filesystem::path directory = "log";
+    std::filesystem::path standardDirectory("log");
 
-    if (!createDirectory(directory)) return false;
+    std::cout << directory << "\n";
+
+    if (!createDirectory(standardDirectory)) return false;
+
+    standardDirectory.append(directory);
+    std::cout << standardDirectory << "\n";
+
+    if (!createDirectory(standardDirectory)) return false;
 
     std::string filename = name + ".csv";
-    std::filesystem::path filepath = directory / filename;
+    std::filesystem::path filepath = standardDirectory / filename;
 
     // Create the csv file first if it does not exist.
     if (!createCSV(filepath, columnNames)) {
@@ -158,8 +166,7 @@ bool loadDataForLR
         ); 
 
         if (!trainDataLoaded) {
-            std::cerr << "Unable to load training data." << "\n";
-            return false;
+            throw std::runtime_error("Unable to load training data.");
         }
 
         bool testDataLoaded = mlpack::data::Load
@@ -170,8 +177,7 @@ bool loadDataForLR
         );
         
         if (!testDataLoaded) {
-            std::cerr << "Unable to load test data." << "\n";
-            return false;
+            throw std::runtime_error("Unable to load test data.");
         }
     }
     catch (const std::runtime_error& e) {
@@ -182,31 +188,64 @@ bool loadDataForLR
     return true;
 }
 
-bool saveModel
+bool loadDataForLOR
 (
-    mlpack::LinearRegression<arma::fmat> model,
-    std::string modelName
+    std::string &directory,
+    std::string &filename,
+    arma::mat &trainData,
+    arma::mat &testData,
+    arma::Row<size_t> &trainLabels,
+    arma::Row<size_t> &testLabels
 )
 {
-    std::filesystem::path modelsPath = "models";
+    std::string trainDataPath = directory + "/" + filename + "a.csv";
+    std::string testDataPath = directory + "/" + filename + "b.csv";
+    std::string trainLabelsPath = directory + "/" + filename + "a_threshold.csv";
+    std::string testLabelsPath = directory + "/" + filename + "b_threshold.csv";
 
-    if (!createDirectory(modelsPath)) {
-        std::cerr << "Failed to create models directory" << "\n";
-        return false;
-    }
-    
     try {
-        bool modelSaved = mlpack::data::Save(
-            "models/" + modelName + ".bin",
-            modelName,
-            model,
-            true,
-            mlpack::data::format::binary
+        bool trainDataLoaded = mlpack::data::Load
+        (
+            trainDataPath,
+            trainData,
+            true
+        ); 
+
+        if (!trainDataLoaded) {
+            throw std::runtime_error("Unable to load training data.");
+        }
+
+        bool trainLabelsLoaded = mlpack::data::Load
+        (
+            trainLabelsPath,
+            trainLabels,
+            true
+        ); 
+
+        if (!trainLabelsLoaded) {
+            throw std::runtime_error("Unable to load training labels.");
+        }
+
+        bool testDataLoaded = mlpack::data::Load
+        (
+            testDataPath,
+            testData,
+            true
         );
         
-        if (!modelSaved) {
-            std::cerr << "Failed to save model." << "\n";
-            return false;
+        if (!testDataLoaded) {
+            throw std::runtime_error("Unable to load test data.");
+        }
+
+        bool testLabelsLoaded = mlpack::data::Load
+        (
+            testLabelsPath,
+            testLabels,
+            true
+        ); 
+
+        if (!testLabelsLoaded) {
+            throw std::runtime_error("Unable to load test labels.");
         }
     }
     catch (const std::runtime_error& e) {
@@ -215,6 +254,7 @@ bool saveModel
     }
 
     return true;
+
 }
 
 bool collectArgumentsForLR
@@ -232,7 +272,7 @@ bool collectArgumentsForLR
 
     if (argc < 8) {
         std::cerr << "Too few arguments" << "\n";
-        std::cerr << "Usage: " << "a.exe <dir: string> <file1: string> <file2: string> <modelName: string> <responseColumn: int> <lambdaInt: int>\n";
+        std::cerr << "Usage: " << "a.exe -lr <dir: string> <file1: string> <file2: string> <modelName: string> <responseColumn: int> <lambdaInt: int>\n";
         return false;
     };
 
@@ -256,13 +296,47 @@ bool collectArgumentsForLR
     return true;
 }
 
+bool collectArgumentsForLOR
+(
+    int &argc,
+    char **argv,
+    std::string &directory,
+    std::string &filename,
+    std::string &modelName,
+    double &lambda
+)
+{
+
+    if (argc < 6) {
+        std::cerr << "Too few arguments." << "\n";
+        std::cerr << "Usage: " << "a.exe -lor <dir: string> <file: string> <modelName: string> <lambdaInt: int>\n";
+        return false;
+    };
+
+    try {
+        directory = argv[2]; // directory containing the files
+        filename = argv[3];
+        modelName = argv[4]; // The name of the model for output in /models when the model is saved. Could be name of csv file as well.
+        lambda = std::stod(argv[5]) / 100.00000f; // Pass as integer value (0 -> 100...200!?)
+    }
+    catch (const std::out_of_range& e) {
+        std::cerr << e.what() << "\n";
+        return false;
+    }
+    catch (const std::invalid_argument& e) {
+        std::cerr << e.what() << "\n";
+        return false;
+    }
+
+    return true;
+}
+
 bool linearRegression
 (
     int &argc,
     char **argv
 )
 {
-    
     std::string directory;
     std::string filename1;
     std::string filename2;
@@ -352,7 +426,7 @@ bool linearRegression
         testMSEString
     };
 
-    std::vector<std::string> columnNames = {
+    static const std::vector<std::string> columnNames = {
         "train",
         "test",
         "lambda",
@@ -360,12 +434,14 @@ bool linearRegression
         "test_mse"
     };
 
-    // Capture recorded data in log/(modelName).csv
+    // Capture recorded data in log/(modelTypeName)/(modelName).csv
     // data and columnNames should always be the same length.
+    static const std::string modelTypeName = "linear_regression";
     bool logged = log
     (
-        modelName, 
-        data, 
+        modelTypeName,
+        modelName,
+        data,
         columnNames
     );
 
@@ -394,40 +470,116 @@ bool logisticRegression
     char **argv
 )
 {
-    std::cout << "Logistically Regressing" << "\n";
-
-    arma::mat data;
-    arma::Row<size_t> labels;
-    arma::rowvec initialPoint;
-    // ensmallen optimizer
+    std::string directory, filename, modelName;
     double lambda;
-    // ensmallen callbacks
 
-    mlpack::LogisticRegression<arma::dmat> lor;
+    if (!collectArgumentsForLOR(
+        argc,
+        argv,
+        directory,
+        filename,
+        modelName,
+        lambda
+    )) return false;
 
+    arma::mat trainData;
+    arma::mat testData;
+    arma::Row<size_t> trainLabels;
+    arma::Row<size_t> testLabels;
+
+    if (!loadDataForLOR(
+        directory,
+        filename,
+        trainData,
+        testData,
+        trainLabels,
+        testLabels
+    )) return false;
+
+    arma::rowvec trainWeights(trainData.n_rows + 1, arma::fill::zeros);
+    trainWeights(0) = 0.5;
+
+    mlpack::LogisticRegression<arma::mat> lor;
+
+    lor.Lambda() = lambda;
+    lor.Parameters() = trainWeights;
     lor.Train(
-        data,
-        labels
+        trainData,
+        trainLabels
     );
 
+    double accuracy = lor.ComputeAccuracy(testData, testLabels);
+
+    arma::Row<size_t> predictions;
+    lor.Classify(testData, predictions);
+
+    std::cout << predictions << "\n";
+
+    double misclassificationError = arma::accu(predictions != testLabels) / testLabels.n_elem * 100.0;
+
+    std::cout << "Test Accuracy: " << accuracy << "%" << std::endl;
 
     return true;
 }
 
-ModelType findModelType
+bool saveModel
+(
+    mlpack::LinearRegression<arma::fmat> &model,
+    std::string &modelName
+)
+{
+    std::filesystem::path modelsPath = "models";
+
+    if (!createDirectory(modelsPath)) {
+        std::cerr << "Failed to create models directory" << "\n";
+        return false;
+    }
+    
+    try {
+        bool modelSaved = mlpack::data::Save(
+            "models/" + modelName + ".bin",
+            modelName,
+            model,
+            true,
+            mlpack::data::format::binary
+        );
+        
+        if (!modelSaved) {
+            throw std::runtime_error("Failed to save model.");
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
+        return false;
+    }
+
+    return true;
+}
+
+bool loadModel
 (
     int &argc,
     char **argv
 )
 {
-    if (argc < 2) return ModelType::None;
+    std::cout << "jahsda" << "\n";
+    return true;
+}
+
+ArgumentType findModelType
+(
+    int &argc,
+    char **argv
+)
+{
+    if (argc < 2) return ArgumentType::None;
 
     std::string type = argv[1];
 
-    // Initialize once.
-    static const std::map<std::string, ModelType> modelTypeMap = {
-        { "-lr", ModelType::LinearRegression },
-        { "-lor", ModelType::LogisticRegression }
+    static const std::map<std::string, ArgumentType> modelTypeMap = {
+        { "-lr", ArgumentType::LinearRegression },
+        { "-lor", ArgumentType::LogisticRegression },
+        { "-lm", ArgumentType::LoadModel}
     };
 
     auto modelTypeFound = modelTypeMap.find(type);
@@ -436,7 +588,7 @@ ModelType findModelType
         return modelTypeFound->second;
     }
 
-    return ModelType::None;
+    return ArgumentType::None;
 }
 
 int main
@@ -445,28 +597,36 @@ int main
     char **argv
 )
 {
-
-    ModelType modelType = findModelType(argc, argv);
+    ArgumentType modelType = findModelType(argc, argv);
 
     switch (modelType) {
-        case ModelType::LinearRegression: {
+
+        case ArgumentType::LoadModel:
+            if (!loadModel(argc, argv)) {
+                std::cerr << "Failed to load model." << "\n";
+                return 1;
+            }
+            break;
+
+        case ArgumentType::LinearRegression:
             if (!linearRegression(argc, argv)) {
                 std::cerr << "Linear Regression Failed" << "\n";
                 return 1;
             }
             break;
-        }
-        case ModelType::LogisticRegression: {
+
+        case ArgumentType::LogisticRegression:
             if (!logisticRegression(argc, argv)) {
                 std::cerr << "Logistic Regression Failed" << "\n";
                 return 1;
             }
             break;
-        }
-        default: {
+
+        case ArgumentType::None:
+        default:
             std::cout << "No model type found." << "\n";
             return 1;
-        }
+            break;
     }
 
     return 0;

@@ -3,7 +3,8 @@
 
 bool log
 (
+    const std::string &directory,
     std::string &name,
     std::vector<std::string> &data,
-    std::vector<std::string> &columnNames
+    const std::vector<std::string> &columnNames
 );

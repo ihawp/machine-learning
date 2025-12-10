@@ -1,13 +1,14 @@
 #include <string>
 #include <map>
 
-enum class ModelType {
+enum class ArgumentType {
     None = 0,
-    LinearRegression = 1,
-    LogisticRegression = 2,
+    LoadModel = 1,
+    LinearRegression = 2,
+    LogisticRegression = 3,
 };
 
-ModelType findModelType
+ArgumentType findModelType
 (
     int &argc,
     char **argv
