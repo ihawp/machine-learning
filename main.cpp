@@ -85,12 +85,9 @@ bool log
 
     std::filesystem::path standardDirectory("log");
 
-    std::cout << directory << "\n";
-
     if (!createDirectory(standardDirectory)) return false;
 
     standardDirectory.append(directory);
-    std::cout << standardDirectory << "\n";
 
     if (!createDirectory(standardDirectory)) return false;
 
@@ -513,11 +510,27 @@ bool logisticRegression
     arma::Row<size_t> predictions;
     lor.Classify(testData, predictions);
 
-    std::cout << predictions << "\n";
+    std::vector<std::string> data = {
+        filename,
+        std::to_string(lambda),
+        std::to_string(accuracy)
+    };
 
-    double misclassificationError = arma::accu(predictions != testLabels) / testLabels.n_elem * 100.0;
+    std::vector<std::string> columnNames = {
+        "name",
+        "lambda",
+        "accuracy",
+    };
 
-    std::cout << "Test Accuracy: " << accuracy << "%" << std::endl;
+    if (!log(
+        "logistic_regression",
+        filename,
+        data,
+        columnNames
+    )) {
+        std::cerr << "Unable to log logistic regression." << "\n";
+        return false;
+    }
 
     return true;
 }

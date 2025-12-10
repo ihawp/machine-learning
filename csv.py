@@ -197,7 +197,8 @@ def main():
     # 2017 (bad data - remove first column line 24 (number 71))
     # and then uncomment and run thresholdColumn (commented out below).
     # comment out the csvThirdPopSwap before running thresholdColumn and after
-    # removing the 71,
+    # removing the 71, csvThirdPopSwap -> Remove bad data -> thresholdColumn(s)
+    
     '''
     fp = p.Path(dir, "2017.csv")
     fp1 = p.Path(dir, "2017a.csv")
@@ -206,7 +207,7 @@ def main():
     cts = False
     csvThirdPopSwap(fp, fp1, fp2, ctp, cts)
     '''
-
+    
     fp = p.Path(dir, "2017a.csv")
     fp1 = p.Path(dir, "2017a_threshold.csv")
     thresholdColumn(fp, fp1, vc, s)
