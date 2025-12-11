@@ -1,8 +1,18 @@
 # Machine Learning with C++
 
-Currently, the code contains a minor CLI for training and testing the Linear Regression model with data in ***world_happiness_data***.
+Currently, the code contains a minor CLI for training and testing mlpack's Linear Regression and Logistic Regression classes.
 
-When a model is trained, it is also tested, this data is then recorded in the log/run.csv file.
+There is example data located in ***world_happiness_data***.
+
+## Prepare Your Data
+
+Assuming your data is in CSV format, you can use the ***csv.py*** file to clean your CSV file(s).
+
+If you choose to use the example data then forgetaboutit, everything you need should be there.
+
+## Use the CLI
+
+
 
 ### Citations
 ```

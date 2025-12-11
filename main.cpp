@@ -254,6 +254,36 @@ bool loadDataForLOR
 
 }
 
+
+// Load a model from the models/ folders.
+// The log function sets a base folder of log/
+// I think I will do the same with the saveModels/ functions.
+bool collectArgumentsForLM
+(
+    int &argc,
+    char **argv,
+    std::string &directory,
+    std::string &modelName
+)
+{
+    if (argc < 4) {
+        std::cerr << "Too few arguments for loading a model." << "\n";
+        return false;
+    }
+
+    try {
+        directory = argv[2];
+        modelName = argv[3];
+    }
+    catch (const std::runtime_error& e) {
+        std::cout << e.what() << "\n";
+        return false;
+    }
+
+    return true;
+
+}
+
 bool collectArgumentsForLR
 (
     int &argc,
@@ -449,7 +479,8 @@ bool linearRegression
 
     bool modelSaved = saveModel
     (
-        model, 
+        model,
+        modelTypeName,
         modelName
     );
 
@@ -522,8 +553,10 @@ bool logisticRegression
         "accuracy",
     };
 
+    static const std::string modelTypeName = "logistic_regression";
+
     if (!log(
-        "logistic_regression",
+        modelTypeName,
         filename,
         data,
         columnNames
@@ -532,12 +565,64 @@ bool logisticRegression
         return false;
     }
 
+    bool modelSaved = saveModel
+    (
+        lor,
+        modelTypeName,
+        modelName
+    );
+
+    if (!modelSaved) {
+        return false;
+    }
+
+    return true;
+}
+
+bool loadModel
+(
+    int &argc,
+    char **argv
+)
+{
+    std::cout << "Loading Model." << "\n";
+
+    std::string directory;
+    std::string modelName;
+
+    if (!collectArgumentsForLM(
+        argc,
+        argv,
+        directory,
+        modelName
+    )) {
+        std::cout << "Unable to collect arguments for loading a model." << "\n";
+        return false;
+    }
+
+    std::string path = "models/" + directory + "/" + modelName + ".bin";
+
+    std::cout << path << "\n";
+
+    mlpack::LogisticRegression<arma::mat> lor;
+
+    mlpack::data::Load(path, modelName, lor, false, data::format::binary);
+
+    std::cout << lor.Lambda() << "\n";
+
+    // Use the model.
+    // I need to ensure I know what type of model it is I am using.
+    // This information could be passed as a flag alongside -lm
+    // Above I have just saved some logistic regression models and am trying
+    // to load them.
+
     return true;
 }
 
 bool saveModel
 (
     mlpack::LinearRegression<arma::fmat> &model,
+    const std::string &directory,
     std::string &modelName
 )
 {
@@ -547,10 +632,17 @@ bool saveModel
         std::cerr << "Failed to create models directory" << "\n";
         return false;
     }
-    
+
+    std::filesystem::path directoryPath = modelsPath / directory;
+
+    if (!createDirectory(directoryPath)) {
+        std::cerr << "Failed to create directory withing models/" << "\n";
+        return false;
+    }
+
     try {
         bool modelSaved = mlpack::data::Save(
-            "models/" + modelName + ".bin",
+            directoryPath.string() + "/" + modelName + ".bin",
             modelName,
             model,
             true,
@@ -569,13 +661,45 @@ bool saveModel
     return true;
 }
 
-bool loadModel
+bool saveModel
 (
-    int &argc,
-    char **argv
+    mlpack::LogisticRegression<arma::mat> &model,
+    const std::string &directory,
+    std::string &modelName
 )
 {
-    std::cout << "jahsda" << "\n";
+    std::filesystem::path modelsPath = "models";
+
+    if (!createDirectory(modelsPath)) {
+        std::cerr << "Failed to create models directory" << "\n";
+        return false;
+    }
+
+    std::filesystem::path directoryPath = modelsPath / directory;
+
+    if (!createDirectory(directoryPath)) {
+        std::cerr << "Failed to create directory withing models/" << "\n";
+        return false;
+    }
+
+    try {
+        bool modelSaved = mlpack::data::Save(
+            directoryPath.string() + "/" + modelName + ".bin",
+            modelName,
+            model,
+            true,
+            mlpack::data::format::binary
+        );
+        
+        if (!modelSaved) {
+            throw std::runtime_error("Failed to save model.");
+        }
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
+        return false;
+    }
+
     return true;
 }
 
@@ -590,9 +714,9 @@ ArgumentType findModelType
     std::string type = argv[1];
 
     static const std::map<std::string, ArgumentType> modelTypeMap = {
+        { "-lm", ArgumentType::LoadModel},
         { "-lr", ArgumentType::LinearRegression },
-        { "-lor", ArgumentType::LogisticRegression },
-        { "-lm", ArgumentType::LoadModel}
+        { "-lor", ArgumentType::LogisticRegression }
     };
 
     auto modelTypeFound = modelTypeMap.find(type);

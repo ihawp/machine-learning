@@ -34,6 +34,7 @@ bool loadDataForLR
 bool saveModel
 (
     mlpack::LinearRegression<arma::fmat> &model,
+    const std::string &directory,
     std::string &modelName
 );
 
