@@ -4,9 +4,10 @@
 #include <armadillo>
 #include <mlpack/core.hpp>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
+#include "arguments.hpp"
 
-using namespace arma;
 using namespace mlpack;
+using namespace arma;
 
 struct LRArguments {
     std::string directory;
@@ -15,12 +16,6 @@ struct LRArguments {
     int responsesColumn;
     std::optional<float> lambda;
 };
-
-bool trainLinearRegression
-(
-    int &argc,
-    char **argv
-);
 
 void prepareFeaturesAndResponses
 (
@@ -34,7 +29,7 @@ bool loadDataForLR
 (
     std::string &directory,
     std::string &filename,
-    arma::fmat &trainData
+    arma::fmat &data
 );
 
 bool collectArgumentsForLR
@@ -42,4 +37,20 @@ bool collectArgumentsForLR
     int &argc,
     char **argv,
     LRArguments &arguments
+);
+
+bool trainLinearRegression
+(
+    int &argc,
+    char **argv,
+    std::string path,
+    std::string modelName
+);
+
+bool testLinearRegression
+(
+    int &argc,
+    char **argv,
+    std::string path,
+    std::string modelName
 );

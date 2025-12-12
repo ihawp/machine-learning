@@ -8,15 +8,17 @@
 #include <mlpack/core.hpp>
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
 #include <mlpack/methods/logistic_regression/logistic_regression.hpp>
+#include "headers/arguments.hpp"
 #include "headers/linear_regression.hpp"
-#include "headers/logistic_regression.hpp"
-#include "headers/model_types.hpp"
-#include "headers/csv_utils.hpp"
+#include "headers/load_model.hpp"
 #include "headers/log.hpp"
-#include "headers/save_model.hpp"
+#include "headers/logistic_regression.hpp"
+#include "headers/template.hpp"
 
 using namespace arma;
 using namespace mlpack;
+
+// Filesystem
 
 bool updateCSV
 (
@@ -78,7 +80,7 @@ bool createDirectory
 
 bool log
 (
-    std::string &directory,
+    const std::string &directory,
     std::string &name,
     std::vector<std::string> &data,
     std::vector<std::string> &columnNames
@@ -109,6 +111,158 @@ bool log
 
     return true;
 }
+
+// ##############################################################################
+// Load Model
+
+bool collectArgumentsForLM
+(
+    int &argc,
+    char **argv,
+    std::string &directory,
+    std::string &modelName
+)
+{
+    if (argc < 5) {
+        std::cerr << "Too few arguments for loading a model." << "\n";
+        return false;
+    }
+
+    try {
+        directory = argv[3];
+        modelName = argv[4];
+    }
+    catch (const std::runtime_error& e) {
+        std::cout << e.what() << "\n";
+        return false;
+    }
+
+    return true;
+
+}
+
+bool fillArgumentsForLM
+(
+    int &argc,
+    char **argv,
+    LMArguments &arguments
+)
+{
+    if (!collectArgumentsForLM(
+        argc,
+        argv,
+        arguments.directory,
+        arguments.modelName
+    )) {
+        std::cout << "Unable to collect arguments for testing a model." << "\n";
+        return false;
+    }
+
+    arguments.path = "models/" + arguments.directory + "/" + arguments.modelName + ".bin";
+
+    return true;
+}
+
+bool testModel
+(
+    int &argc,
+    char **argv,
+    ModelType &modelType
+)
+{
+    LMArguments arguments;
+
+    if (!fillArgumentsForLM(
+        argc,
+        argv,
+        arguments
+    )) return false;
+
+    switch (modelType) {
+        case ModelType::LinearRegression:
+            if (!testLinearRegression(
+                argc,
+                argv,
+                arguments.path,
+                arguments.modelName
+            )) {
+                std::cerr << "Failed to test Linear Regression model." << "\n";
+                return false;
+            }
+            break;
+
+        case ModelType::LogisticRegression:
+            if (!testLogisticRegression(
+                argc,
+                argv,
+                arguments.path,
+                arguments.modelName
+            )) {
+                std::cerr << "Failed to test Logistic Regression model." << "\n";
+                return false;
+            }
+            break;
+
+        case ModelType::None:
+        default:
+            std::cerr << "Who knows? Nothing broke, try again!" << "\n";
+            return false;
+            break;
+    }
+
+    return true;
+}
+
+bool trainModel
+(
+    int &argc,
+    char **argv,
+    ModelType &modelType
+)
+{
+    LMArguments arguments;
+
+    if (!fillArgumentsForLM(
+        argc,
+        argv,
+        arguments
+    )) return false;
+
+    switch (modelType) {
+        case ModelType::LinearRegression:
+            if (!trainLinearRegression(
+                argc,
+                argv,
+                arguments.path,
+                arguments.modelName
+            )) {
+                std::cerr << "Failed to train Linear Regression model." << "\n";
+                return false;
+            }
+            break;
+        case ModelType::LogisticRegression:
+            if (!trainLinearRegression(
+                argc,
+                argv,
+                arguments.path,
+                arguments.modelName
+            )) {
+                std::cerr << "Failed to train Logistic Regression model." << "\n";
+                return false;
+            }
+            break;
+        default:
+            std::cerr << "Who knows? Nothing broke, try again!" << "\n";
+            return false;
+            break;
+    }
+
+    return true;
+}
+
+
+// ##############################################################################
+// Linear Regression
 
 void prepareFeaturesAndResponses
 (
@@ -148,13 +302,13 @@ bool loadDataForLR
 (
     std::string &directory,
     std::string &filename,
-    arma::fmat &trainData
+    arma::fmat &data
 )
 {
-    std::string trainPath = directory + "/" + filename;
+    std::string path = directory + "/" + filename;
 
     try {
-        loadData(trainPath, trainData);
+        loadData(path, data);
     }
     catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
@@ -162,62 +316,6 @@ bool loadDataForLR
     }
 
     return true;
-}
-
-bool loadDataForLOR
-(
-    std::string &directory,
-    std::string &filename,
-    arma::mat &trainData,
-    arma::mat &testData,
-    arma::Row<size_t> &trainLabels,
-    arma::Row<size_t> &testLabels
-)
-{
-    std::string trainDataPath = directory + "/" + filename + "a.csv";
-    std::string testDataPath = directory + "/" + filename + "b.csv";
-    std::string trainLabelsPath = directory + "/" + filename + "a_threshold.csv";
-    std::string testLabelsPath = directory + "/" + filename + "b_threshold.csv";
-
-    try {
-        loadData(trainDataPath, trainData);
-        loadData(trainLabelsPath, trainLabels);
-        loadData(testDataPath, testData);
-        loadData(testLabelsPath, testLabels);
-    }
-    catch (const std::runtime_error& e) {
-        std::cerr << e.what() << "\n";
-        return false;
-    }
-
-    return true;
-
-}
-
-bool collectArgumentsForLM
-(
-    int &argc,
-    char **argv,
-    std::string &directory,
-    std::string &modelName
-)
-{
-    if (argc < 4) {
-        std::cerr << "Too few arguments for loading a model." << "\n";
-        return false;
-    }
-
-    try {
-        directory = argv[3];
-        modelName = argv[4];
-    }
-    catch (const std::runtime_error& e) {
-        std::cout << e.what() << "\n";
-        return false;
-    }
-
-    return true;
-
 }
 
 bool collectArgumentsForLR
@@ -240,7 +338,7 @@ bool collectArgumentsForLR
         arguments.modelName = argv[5]; // The name of the model for output in /models when the model is saved. Could be name of csv file as well.
         arguments.responsesColumn = std::stoi(argv[6]); // Choose response column for submitted files
 
-        if (argc < 8) {
+        if (argc > 7) {
             arguments.lambda = std::stof(argv[7]) / 100.0000f; // Pass as integer value (0 -> 100...200!?)
         }
     }
@@ -256,46 +354,12 @@ bool collectArgumentsForLR
     return true;
 }
 
-bool collectArgumentsForLOR
-(
-    int &argc,
-    char **argv,
-    std::string &directory,
-    std::string &filename,
-    std::string &modelName,
-    double &lambda
-)
-{
-
-    if (argc < 6) {
-        std::cerr << "Too few arguments." << "\n";
-        std::cerr << "Usage: " << "a.exe -lor <dir: string> <file: string> <modelName: string> <lambdaInt: int>\n";
-        return false;
-    };
-
-    try {
-        directory = argv[3]; // directory containing the files
-        filename = argv[4];
-        modelName = argv[5]; // The name of the model for output in /models when the model is saved. Could be name of csv file as well.
-        lambda = std::stod(argv[6]) / 100.00000f; // Pass as integer value (0 -> 100...200!?)
-    }
-    catch (const std::out_of_range& e) {
-        std::cerr << e.what() << "\n";
-        return false;
-    }
-    catch (const std::invalid_argument& e) {
-        std::cerr << e.what() << "\n";
-        return false;
-    }
-
-    return true;
-}
-
-// starting point
 bool trainLinearRegression
 (
     int &argc,
-    char **argv
+    char **argv,
+    std::string path,
+    std::string modelName
 )
 {
 
@@ -366,7 +430,7 @@ bool trainLinearRegression
         trainingMSEString
     };
 
-    static const std::vector<std::string> columnNames = {
+    std::vector<std::string> columnNames = {
         "modelName",
         "train",
         "lambda",
@@ -374,15 +438,13 @@ bool trainLinearRegression
     };
 
     static const std::string modelTypeName = "linear_regression";
-    bool logged = log
-    (
+
+    if (!log(
         modelTypeName,
         arguments.modelName,
         logData,
         columnNames
-    );
-
-    if (!logged) {
+    )) {
         std::cerr << "Failed to log run." << "\n"; 
         return false;
     }
@@ -438,97 +500,140 @@ bool testLinearRegression
     arma::fmat data, dataset;
     arma::frowvec responses;
 
+    return true;
+
 }
 
-// starting point
-bool trainLogisticRegression
+
+// ##############################################################################
+// Logistic Regression, I think all complete for now good yes!
+
+bool loadDataForLOR
 (
-    int &argc,
-    char **argv
+    std::string &directory,
+    std::string &filename,
+    arma::mat &data,
+    arma::Row<size_t> &labels
 )
 {
-    std::string directory, filename, modelName;
-    double lambda;
+    std::string dataPath = directory + "/" + filename + ".csv";
+    std::string labelsPath = directory + "/" + filename + "_threshold.csv";
 
-    if (!collectArgumentsForLOR(
-        argc,
-        argv,
-        directory,
-        filename,
-        modelName,
-        lambda
-    )) return false;
+    std::cout << dataPath << " " << labelsPath << "\n";
 
-    arma::mat trainData;
-    arma::mat testData;
-    arma::Row<size_t> trainLabels;
-    arma::Row<size_t> testLabels;
-
-    if (!loadDataForLOR(
-        directory,
-        filename,
-        trainData,
-        testData,
-        trainLabels,
-        testLabels
-    )) return false;
-
-    arma::rowvec trainWeights(trainData.n_rows + 1, arma::fill::zeros);
-    trainWeights(0) = 0.5;
-
-    mlpack::LogisticRegression<arma::mat> lor;
-
-    lor.Lambda() = lambda;
-    lor.Parameters() = trainWeights;
-    lor.Train(
-        trainData,
-        trainLabels
-    );
-
-    double accuracy = lor.ComputeAccuracy(testData, testLabels);
-
-    arma::Row<size_t> predictions;
-    lor.Classify(testData, predictions);
-
-    std::vector<std::string> data = {
-        filename,
-        std::to_string(lambda),
-        std::to_string(accuracy)
-    };
-
-    static const std::vector<std::string> columnNames = {
-        "name",
-        "lambda",
-        "accuracy",
-    };
-
-    static const std::string modelTypeName = "logistic_regression";
-
-    if (!log(
-        modelTypeName,
-        filename,
-        data,
-        columnNames
-    )) {
-        std::cerr << "Unable to log logistic regression." << "\n";
+    try {
+        loadData(dataPath, data);
+        loadData(labelsPath, labels);
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
         return false;
     }
 
-    bool modelSaved = saveModel
-    (
-        lor,
-        modelTypeName,
-        modelName
-    );
+    return true;
 
-    if (!modelSaved) {
+}
+
+bool collectArgumentsForLOR
+(
+    int &argc,
+    char **argv,
+    LORArguments arguments
+)
+{
+    if (argc < 5) {
+        std::cerr << "Too few arguments." << "\n";
+        std::cerr << "Usage: " << "a.exe -lor <dir: string> <file: string> <modelName: string> <lambdaInt: int>\n";
+        return false;
+    };
+
+    try {
+        arguments.directory = argv[3]; // directory containing the files
+        arguments.filename = argv[4];
+        arguments.modelName = argv[5]; // The name of the model for output in /models when the model is saved. Could be name of csv file as well.
+        
+        if (argc > 6) {
+            arguments.lambda = std::stod(argv[6]) / 100.00000f; // Pass as integer value (0 -> 100...200!?)
+        }
+    }
+    catch (const std::out_of_range& e) {
+        std::cerr << e.what() << "\n";
+        return false;
+    }
+    catch (const std::invalid_argument& e) {
+        std::cerr << e.what() << "\n";
         return false;
     }
 
     return true;
 }
 
-// starting points
+bool fillArgumentsForLOR
+(
+    int &argc,
+    char **argv,
+    LORData data
+)
+{
+    if (!collectArgumentsForLOR(
+        argc,
+        argv,
+        data.arguments
+    )) return false;
+
+    if (!loadDataForLOR(
+        data.arguments.directory,
+        data.arguments.filename,
+        data.data,
+        data.labels
+    )) return false;
+
+    return true;
+}
+
+bool trainLogisticRegression
+(
+    int &argc,
+    char **argv
+)
+{
+    // Collect arguments.
+    LORData data;
+
+    if (!fillArgumentsForLOR(
+        argc,
+        argv,
+        data
+    )) return false;
+
+    if (!data.arguments.lambda.has_value()) {
+        std::cerr << "Unable to find lambda value." << "\n";
+        return false;
+    }
+
+    // Train the model.
+    mlpack::LogisticRegression<arma::mat> lor;
+    arma::rowvec trainWeights(data.data.n_rows + 1, arma::fill::zeros);
+    
+    trainWeights(0) = 0.5;
+
+    lor.Lambda() = data.arguments.lambda.value();
+    lor.Parameters() = trainWeights;
+    lor.Train(
+        data.data,
+        data.labels
+    );
+
+    // Save the model.
+    if (!saveModel(
+        lor,
+        "logistic_regression",
+        data.arguments.modelName
+    )) return false;
+
+    return true;
+}
+
 bool testLogisticRegression
 (
     int &argc,
@@ -537,6 +642,7 @@ bool testLogisticRegression
     std::string &modelName
 )
 {
+    // Load the model.
     mlpack::LogisticRegression<arma::mat> lor;
 
     if (!mlpack::data::Load(
@@ -550,88 +656,55 @@ bool testLogisticRegression
         return false;
     }
 
-    std::string directory;
-    std::string filename;
-    double lambda;
+    // Parse and name arguments.
+    LORData data;
 
-}
-
-// OVERALL starting point
-bool testModel
-(
-    int &argc,
-    char **argv,
-    ModelType modelType
-)
-{
-    std::cout << "Loading Model." << "\n";
-
-    std::string directory;
-    std::string modelName;
-
-    if (!collectArgumentsForLM(
+    if (!fillArgumentsForLOR(
         argc,
         argv,
-        directory,
-        modelName
+        data
+    )) return false;
+
+    // Determine and log results.
+    double accuracy = lor.ComputeAccuracy(data.data, data.labels);
+
+    std::vector<std::string> logData = {
+        data.arguments.filename,
+        std::to_string(lor.Lambda()),
+        std::to_string(accuracy)
+    };
+
+    // I would love for this to be a static const.
+    std::vector<std::string> columnNames = {
+        "name",
+        "lambda",
+        "accuracy",
+    };
+
+    static const std::string modelTypeName = "logistic_regression";
+
+    if (!log(
+        modelTypeName,
+        data.arguments.modelName,
+        logData,
+        columnNames
     )) {
-        std::cout << "Unable to collect arguments for testing a model." << "\n";
+        std::cerr << "Unable to log logistic regression." << "\n";
         return false;
     }
 
-    std::string path = "models/" + directory + "/" + modelName + ".bin";
-
-    switch (modelType) {
-        case ModelType::LinearRegression:
-            if (!testLinearRegression(
-                argc,
-                argv,
-                path,
-                modelName
-            )) {
-                std::cerr << "Failed to test Linear Regression model." << "\n";
-                return false;
-            }
-            break;
-        case ModelType::LogisticRegression:
-            if (!testLogisticRegression(
-                argc,
-                argv,
-                path,
-                modelName
-            )) {
-                std::cerr << "Failed to test Logistic Regression model." << "\n";
-                return false;
-            }
-            break;
-        default:
-            std:cerr << "Who knows? Nothing broke, try again!" << "\n";
-            return false;
-            break;
-    }
-
     return true;
+
 }
 
-// OVERALL starting point
-bool trainModel
+// ##############################################################################
+// Direct program.
+
+ArgumentType findArgumentType
 (
-    int &argc,
-    char **argv,
-    ModelType modelType
+    std::string argumentTypeString
 )
 {
-    // Use switch to lead to trainLinearRegression...trainLogisticRegression, etc.
-    return true;
-}
-
-bool findArgumentType
-(
-    std::string argumentTypeString,
-    ArgumentType argumentType
-)
-{
-
     static const std::map<std::string, ArgumentType> argumentTypeMap = {
         { "-tem", ArgumentType::TestModel },
         { "-trm", ArgumentType::TrainModel }
@@ -640,17 +713,15 @@ bool findArgumentType
     auto argumentTypeFound = argumentTypeMap.find(argumentTypeString);
 
     if (argumentTypeFound != argumentTypeMap.end()) {
-        argumentType = argumentTypeFound->second;
-        return true;
+        return argumentTypeFound->second;
     }
 
-    return false;
+    return ArgumentType::None;
 }
 
-bool findModelType
+ModelType findModelType
 (
-    std::string modelTypeString,
-    ModelType modelType
+    std::string modelTypeString
 )
 {
     static const std::map<std::string, ModelType> modelTypeMap = {
@@ -661,11 +732,10 @@ bool findModelType
     auto modelTypeFound = modelTypeMap.find(modelTypeString);
 
     if (modelTypeFound != modelTypeMap.end()) {
-        modelType = modelTypeFound->second;
-        return true;
+        return modelTypeFound->second;
     }
 
-    return false;
+    return ModelType::None;
 }
 
 int main
@@ -680,26 +750,16 @@ int main
     }
 
     std::string argumentTypeString = argv[1];
-    ArgumentType argumentType;
-
-    if (!findArgumentType(
-        argumentTypeString,
-        argumentType
-    )) {
-        std::cerr << "Unable to determine primary argument type selection (train/test). Use -trm to 'train model' or -tem to 'test model.'" << "\n";
-        return 1;
-    }
+    ArgumentType argumentType = findArgumentType
+    (
+        argumentTypeString
+    );
 
     std::string modelTypeString = argv[2];
-    ModelType modelType;
-
-    if (!findModelType(
-        modelTypeString,
-        modelType
-    )) {
-        std::cerr << "Unable to determine model type selection." << "\n";
-        return 1;
-    }
+    ModelType modelType = findModelType
+    (
+        modelTypeString
+    );
 
     switch (argumentType) {
         case ArgumentType::TrainModel:
@@ -712,6 +772,7 @@ int main
                 return false;
             }
             break;
+        
         case ArgumentType::TestModel:
             if (!testModel(
                 argc,
@@ -721,6 +782,12 @@ int main
                 std::cerr << "Unable to test model :(" << "\n";
                 return false;
             }
+            break;
+
+        case ArgumentType::None:
+        default:
+            std::cerr << "Oh no!" << "\n";
+            return false;
             break;
     }
 

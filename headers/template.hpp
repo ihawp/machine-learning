@@ -1,6 +1,10 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <mlpack/core.hpp>
+
+using namespace mlpack;
 
 template <typename T>
 bool saveModel
@@ -55,6 +59,7 @@ void loadData
     T &dataLocation // Generic model type because all models can be ::Load(ed)
 )
 {
+
     bool loaded = mlpack::data::Load
     (
         path,

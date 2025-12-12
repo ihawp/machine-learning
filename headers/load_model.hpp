@@ -1,11 +1,39 @@
 #pragma once
 
-#include <model_types.hpp>
+#include <string>
+#include "arguments.hpp"
 
-bool loadModel
+struct LMArguments {
+    std::string directory;
+    std::string modelName;
+    std::string path;
+};
+
+bool collectArgumentsForLM
 (
     int &argc,
     char **argv,
-    ModelType modelType
+    std::string &directory,
+    std::string &modelName
 );
 
+bool fillArgumentsForLM
+(
+    int &argc,
+    char **argv,
+    LMArguments &arguments
+);
+
+bool testModel
+(
+    int &argc,
+    char **argv,
+    ModelType &modelType
+);
+
+bool trainModel
+(
+    int &argc,
+    char **argv,
+    ModelType &modelType
+);

@@ -12,7 +12,7 @@ If you choose to use the example data then forgetaboutit, everything you need sh
 
 ## Use the CLI
 
-
+Do it. ;) <3
 
 ### Citations
 ```
