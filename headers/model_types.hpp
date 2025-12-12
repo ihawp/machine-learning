@@ -2,14 +2,23 @@
 #include <map>
 
 enum class ArgumentType {
-    None = 0,
-    LoadModel = 1,
-    LinearRegression = 2,
-    LogisticRegression = 3,
+    TrainModel,
+    TestModel
 };
 
-ArgumentType findModelType
+enum class ModelType {
+    LinearRegression,
+    LogisticRegression
+};
+
+bool findArgumentType
 (
-    int &argc,
-    char **argv
+    std::string argumentTypeString,
+    ArgumentType argumentType
+);
+
+bool findModelType
+(
+    std::string modelTypeString,
+    ModelType modelType
 );

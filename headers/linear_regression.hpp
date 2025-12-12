@@ -8,7 +8,15 @@
 using namespace arma;
 using namespace mlpack;
 
-bool linearRegression
+struct LRArguments {
+    std::string directory;
+    std::string filename;
+    std::string modelName;
+    int responsesColumn;
+    std::optional<float> lambda;
+};
+
+bool trainLinearRegression
 (
     int &argc,
     char **argv
@@ -25,27 +33,13 @@ void prepareFeaturesAndResponses
 bool loadDataForLR
 (
     std::string &directory,
-    std::string &filename1,
-    std::string &filename2,
-    arma::fmat &trainData,
-    arma::fmat &testData
-);
-
-bool saveModel
-(
-    mlpack::LinearRegression<arma::fmat> &model,
-    const std::string &directory,
-    std::string &modelName
+    std::string &filename,
+    arma::fmat &trainData
 );
 
 bool collectArgumentsForLR
 (
     int &argc,
     char **argv,
-    std::string &directory,
-    std::string &filename1,
-    std::string &filename2,
-    std::string &modelName,
-    int &responsesColumn,
-    float &lambda
+    LRArguments &arguments
 );

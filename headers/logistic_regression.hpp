@@ -8,7 +8,7 @@
 using namespace arma;
 using namespace mlpack;
 
-bool logisticRegression
+bool trainLogisticRegression
 (
     int &argc,
     char **argv
@@ -32,11 +32,4 @@ bool loadDataForLOR
     arma::mat &testData,
     arma::Row<size_t> &trainLabels,
     arma::Row<size_t> &testLabels
-);
-
-bool saveModel
-(
-    mlpack::LogisticRegression<arma::mat> &model,
-    const std::string &directory,
-    std::string &modelName
 );
