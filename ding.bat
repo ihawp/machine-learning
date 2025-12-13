@@ -12,7 +12,11 @@ IF %ERRORLEVEL% NEQ 0 (
 FOR /L %%q IN (0, 1, 100) DO (
     FOR /L %%i IN (2015, 1, 2020) DO (
 
-        .\build\Debug\regression_model.exe -trm -lr world_happiness_data %%ia.csv %%ib.csv %%i_test 1 %%q
+        REM Train with a data
+        .\build\Debug\regression_model.exe -trm -lr world_happiness_data %%ia.csv %%i_test 0 %%q
+
+        REM Test with b data
+        .\build\Debug\regression_model.exe -tem -lr world_happiness_data %%ib.csv %%i_test 0 %%q
 
         IF %ERRORLEVEL% NEQ 0 (
             ECHO Error: Run

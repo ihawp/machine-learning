@@ -5,6 +5,7 @@
 #include <armadillo>
 #include <mlpack/core.hpp>
 #include <mlpack/methods/logistic_regression/logistic_regression.hpp>
+#include "arguments.hpp"
 
 using namespace arma;
 using namespace mlpack;
@@ -34,14 +35,14 @@ bool collectArgumentsForLOR
 (
     int &argc,
     char **argv,
-    LORArguments arguments
+    LORArguments &arguments
 );
 
 bool fillArgumentsForLOR
 (
     int &argc,
     char **argv,
-    LORData data
+    LORData &data
 );
 
 bool trainLogisticRegression
@@ -53,7 +54,5 @@ bool trainLogisticRegression
 bool testLogisticRegression
 (
     int &argc,
-    char **argv,
-    std::string &path,
-    std::string &modelName
+    char **argv
 );

@@ -42,15 +42,20 @@ bool collectArgumentsForLR
 bool trainLinearRegression
 (
     int &argc,
+    char **argv
+);
+
+bool fillArgumentsForLR
+(
+    int &argc,
     char **argv,
-    std::string path,
-    std::string modelName
+    arma::fmat &dataset,
+    arma::frowvec &responses,
+    LRArguments &arguments
 );
 
 bool testLinearRegression
 (
     int &argc,
-    char **argv,
-    std::string path,
-    std::string modelName
+    char **argv
 );

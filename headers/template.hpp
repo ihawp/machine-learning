@@ -59,7 +59,6 @@ void loadData
     T &dataLocation // Generic model type because all models can be ::Load(ed)
 )
 {
-
     bool loaded = mlpack::data::Load
     (
         path,
@@ -68,6 +67,6 @@ void loadData
     ); 
 
     if (!loaded) {
-        throw std::runtime_error("Unable to load training labels.");
+        throw std::runtime_error("Unable to load data.");
     }
 }

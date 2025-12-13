@@ -18,6 +18,7 @@
 using namespace arma;
 using namespace mlpack;
 
+// ##############################################################################
 // Filesystem
 
 bool updateCSV
@@ -113,155 +114,6 @@ bool log
 }
 
 // ##############################################################################
-// Load Model
-
-bool collectArgumentsForLM
-(
-    int &argc,
-    char **argv,
-    std::string &directory,
-    std::string &modelName
-)
-{
-    if (argc < 5) {
-        std::cerr << "Too few arguments for loading a model." << "\n";
-        return false;
-    }
-
-    try {
-        directory = argv[3];
-        modelName = argv[4];
-    }
-    catch (const std::runtime_error& e) {
-        std::cout << e.what() << "\n";
-        return false;
-    }
-
-    return true;
-
-}
-
-bool fillArgumentsForLM
-(
-    int &argc,
-    char **argv,
-    LMArguments &arguments
-)
-{
-    if (!collectArgumentsForLM(
-        argc,
-        argv,
-        arguments.directory,
-        arguments.modelName
-    )) {
-        std::cout << "Unable to collect arguments for testing a model." << "\n";
-        return false;
-    }
-
-    arguments.path = "models/" + arguments.directory + "/" + arguments.modelName + ".bin";
-
-    return true;
-}
-
-bool testModel
-(
-    int &argc,
-    char **argv,
-    ModelType &modelType
-)
-{
-    LMArguments arguments;
-
-    if (!fillArgumentsForLM(
-        argc,
-        argv,
-        arguments
-    )) return false;
-
-    switch (modelType) {
-        case ModelType::LinearRegression:
-            if (!testLinearRegression(
-                argc,
-                argv,
-                arguments.path,
-                arguments.modelName
-            )) {
-                std::cerr << "Failed to test Linear Regression model." << "\n";
-                return false;
-            }
-            break;
-
-        case ModelType::LogisticRegression:
-            if (!testLogisticRegression(
-                argc,
-                argv,
-                arguments.path,
-                arguments.modelName
-            )) {
-                std::cerr << "Failed to test Logistic Regression model." << "\n";
-                return false;
-            }
-            break;
-
-        case ModelType::None:
-        default:
-            std::cerr << "Who knows? Nothing broke, try again!" << "\n";
-            return false;
-            break;
-    }
-
-    return true;
-}
-
-bool trainModel
-(
-    int &argc,
-    char **argv,
-    ModelType &modelType
-)
-{
-    LMArguments arguments;
-
-    if (!fillArgumentsForLM(
-        argc,
-        argv,
-        arguments
-    )) return false;
-
-    switch (modelType) {
-        case ModelType::LinearRegression:
-            if (!trainLinearRegression(
-                argc,
-                argv,
-                arguments.path,
-                arguments.modelName
-            )) {
-                std::cerr << "Failed to train Linear Regression model." << "\n";
-                return false;
-            }
-            break;
-        case ModelType::LogisticRegression:
-            if (!trainLinearRegression(
-                argc,
-                argv,
-                arguments.path,
-                arguments.modelName
-            )) {
-                std::cerr << "Failed to train Logistic Regression model." << "\n";
-                return false;
-            }
-            break;
-        default:
-            std::cerr << "Who knows? Nothing broke, try again!" << "\n";
-            return false;
-            break;
-    }
-
-    return true;
-}
-
-
-// ##############################################################################
 // Linear Regression
 
 void prepareFeaturesAndResponses
@@ -354,38 +206,32 @@ bool collectArgumentsForLR
     return true;
 }
 
-bool trainLinearRegression
+bool fillArgumentsForLR
 (
     int &argc,
     char **argv,
-    std::string path,
-    std::string modelName
+    arma::fmat &dataset,
+    arma::frowvec &responses,
+    LRArguments &arguments
 )
 {
-
-    arma::fmat data, dataset;
-    arma::frowvec responses;
-
-    LRArguments arguments;
-    
+    // No points in collecting directory or filename on this or LOR version. I will change later <3
     if (!collectArgumentsForLR(
         argc,
         argv,
         arguments
-    ))
-    {
-        std::cerr << "Failed to collect arguments." << "\n";
+    )) {
+        std::cerr << "Unable to collect arguments for Linear Regression." << "\n";
         return false;
     }
 
-    bool dataLoaded = loadDataForLR
-    (
+    arma::fmat data;
+
+    if (!loadDataForLR(
         arguments.directory,
         arguments.filename,
         data
-    );
-
-    if (!dataLoaded) return false;
+    )) return false;
 
     prepareFeaturesAndResponses
     (
@@ -396,6 +242,29 @@ bool trainLinearRegression
     );
 
     return true;
+}
+
+bool trainLinearRegression
+(
+    int &argc,
+    char **argv
+)
+{
+    arma::fmat dataset;
+    arma::frowvec responses;
+
+    LRArguments arguments;
+    
+    if (!fillArgumentsForLR(
+        argc,
+        argv,
+        dataset,
+        responses,
+        arguments
+    )) {
+        std::cerr << "Unable to fill arguments for testing Linear Regression." << "\n";
+        return false;
+    }
 
     mlpack::LinearRegression<arma::fmat> model;
 
@@ -413,46 +282,10 @@ bool trainLinearRegression
         true
     );
 
-    // Mean Squared Error (How low can you go?)
-    float trainingMSE = model.ComputeError
-    (
-        dataset,
-        responses
-    );
-
-    std::string lambdaString = std::to_string(arguments.lambda.value());
-    std::string trainingMSEString = std::to_string(trainingMSE);
-
-    std::vector<std::string> logData = {
-        arguments.modelName,
-        arguments.filename,
-        lambdaString,
-        trainingMSEString
-    };
-
-    std::vector<std::string> columnNames = {
-        "modelName",
-        "train",
-        "lambda",
-        "training_mse"
-    };
-
-    static const std::string modelTypeName = "linear_regression";
-
-    if (!log(
-        modelTypeName,
-        arguments.modelName,
-        logData,
-        columnNames
-    )) {
-        std::cerr << "Failed to log run." << "\n"; 
-        return false;
-    }
-
     bool modelSaved = saveModel
     (
         model,
-        modelTypeName,
+        "linear_regression",
         arguments.modelName
     );
 
@@ -464,32 +297,36 @@ bool trainLinearRegression
     return true;
 }
 
+
 bool testLinearRegression
 (
     int &argc,
-    char **argv,
-    std::string path,
-    std::string modelName
+    char **argv
 )
 {
 
+    arma::fmat dataset;
+    arma::frowvec responses;
     LRArguments arguments;
 
-    if (!collectArgumentsForLR(
+    if (!fillArgumentsForLR(
         argc,
         argv,
+        dataset,
+        responses,
         arguments
     )) {
-        std::cerr << "Unable to collect arguments for Linear Regression." << "\n";
+        std::cerr << "Unable to fill arguments for testing Linear Regression." << "\n";
         return false;
     }
 
-    mlpack::LinearRegression<arma::fmat> lr;
+    mlpack::LinearRegression<arma::fmat> model;
+    std::string path = "models/linear_regression/" + arguments.modelName + ".bin";
 
     if (!mlpack::data::Load(
         path,
-        modelName,
-        lr,
+        arguments.modelName,
+        model,
         false,
         data::format::binary
     )) {
@@ -497,16 +334,45 @@ bool testLinearRegression
         return false;
     }
 
-    arma::fmat data, dataset;
-    arma::frowvec responses;
+    // Mean Squared Error (How low can you go?)
+    float MSE = model.ComputeError
+    (
+        dataset,
+        responses
+    );
+
+    std::string lambdaString = std::to_string(arguments.lambda.value());
+    std::string MSEString = std::to_string(MSE);
+
+    std::vector<std::string> logData = {
+        arguments.modelName,
+        arguments.filename,
+        lambdaString,
+        MSEString
+    };
+
+    std::vector<std::string> columnNames = {
+        "model",
+        "file",
+        "lambda",
+        "mse"
+    };
+
+    if (!log(
+        "linear_regression",
+        arguments.modelName,
+        logData,
+        columnNames
+    )) {
+        std::cerr << "Failed to log run." << "\n"; 
+        return false;
+    }
 
     return true;
-
 }
 
-
 // ##############################################################################
-// Logistic Regression, I think all complete for now good yes!
+// Logistic Regression
 
 bool loadDataForLOR
 (
@@ -519,8 +385,6 @@ bool loadDataForLOR
     std::string dataPath = directory + "/" + filename + ".csv";
     std::string labelsPath = directory + "/" + filename + "_threshold.csv";
 
-    std::cout << dataPath << " " << labelsPath << "\n";
-
     try {
         loadData(dataPath, data);
         loadData(labelsPath, labels);
@@ -531,17 +395,16 @@ bool loadDataForLOR
     }
 
     return true;
-
 }
 
 bool collectArgumentsForLOR
 (
     int &argc,
     char **argv,
-    LORArguments arguments
+    LORArguments &arguments
 )
 {
-    if (argc < 5) {
+    if (argc < 6) {
         std::cerr << "Too few arguments." << "\n";
         std::cerr << "Usage: " << "a.exe -lor <dir: string> <file: string> <modelName: string> <lambdaInt: int>\n";
         return false;
@@ -572,7 +435,7 @@ bool fillArgumentsForLOR
 (
     int &argc,
     char **argv,
-    LORData data
+    LORData &data
 )
 {
     if (!collectArgumentsForLOR(
@@ -637,17 +500,25 @@ bool trainLogisticRegression
 bool testLogisticRegression
 (
     int &argc,
-    char **argv,
-    std::string &path,
-    std::string &modelName
+    char **argv
 )
 {
-    // Load the model.
+    LORData data;
+
+    // doesnt need to collect directory / filename
+    if (!fillArgumentsForLOR(
+        argc,
+        argv,
+        data
+    )) return false;
+
     mlpack::LogisticRegression<arma::mat> lor;
+
+    std::string path = "models/logistic_regression/" + data.arguments.modelName + ".bin";
 
     if (!mlpack::data::Load(
         path,
-        modelName,
+        data.arguments.modelName,
         lor,
         false,
         data::format::binary
@@ -656,17 +527,12 @@ bool testLogisticRegression
         return false;
     }
 
-    // Parse and name arguments.
-    LORData data;
-
-    if (!fillArgumentsForLOR(
-        argc,
-        argv,
-        data
-    )) return false;
-
     // Determine and log results.
-    double accuracy = lor.ComputeAccuracy(data.data, data.labels);
+    double accuracy = lor.ComputeAccuracy
+    (
+        data.data,
+        data.labels
+    );
 
     std::vector<std::string> logData = {
         data.arguments.filename,
@@ -695,6 +561,82 @@ bool testLogisticRegression
 
     return true;
 
+}
+
+// ##############################################################################
+// Load Model
+
+bool testModel
+(
+    int &argc,
+    char **argv,
+    ModelType &modelType
+)
+{
+    switch (modelType) {
+        case ModelType::LinearRegression:
+            if (!testLinearRegression(
+                argc,
+                argv
+            )) {
+                std::cerr << "Failed to test Linear Regression model." << "\n";
+                return false;
+            }
+            break;
+
+        case ModelType::LogisticRegression:
+            if (!testLogisticRegression(
+                argc,
+                argv
+            )) {
+                std::cerr << "Failed to test Logistic Regression model." << "\n";
+                return false;
+            }
+            break;
+
+        case ModelType::None:
+        default:
+            std::cerr << "Who knows? Nothing broke, try again!" << "\n";
+            return false;
+            break;
+    }
+
+    return true;
+}
+
+bool trainModel
+(
+    int &argc,
+    char **argv,
+    ModelType &modelType
+)
+{
+    switch (modelType) {
+        case ModelType::LinearRegression:
+            if (!trainLinearRegression(
+                argc,
+                argv
+            )) {
+                std::cerr << "Failed to train Linear Regression model." << "\n";
+                return false;
+            }
+            break;
+        case ModelType::LogisticRegression:
+            if (!trainLogisticRegression(
+                argc,
+                argv
+            )) {
+                std::cerr << "Failed to train Logistic Regression model." << "\n";
+                return false;
+            }
+            break;
+        default:
+            std::cerr << "Who knows? Nothing broke, try again!" << "\n";
+            return false;
+            break;
+    }
+
+    return true;
 }
 
 // ##############################################################################
