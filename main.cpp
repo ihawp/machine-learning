@@ -27,7 +27,6 @@ bool updateCSV
     std::vector<std::string> &data
 )
 {
-
     std::fstream s;
     s.open(path, std::ios::app);
 
@@ -37,14 +36,10 @@ bool updateCSV
     }
 
     for (int i = 0; i < data.size(); i++) {
-        if (i != 0) {
-            s << ",";
-        }
+        if (i) s << ",";
         s << data[i];
     }
     s << "\n";
-
-    // s.close(); // Not required due to RAII.
 
     return true;
 }
@@ -345,14 +340,12 @@ bool testLinearRegression
     std::string MSEString = std::to_string(MSE);
 
     std::vector<std::string> logData = {
-        arguments.modelName,
         arguments.filename,
         lambdaString,
         MSEString
     };
 
     std::vector<std::string> columnNames = {
-        "model",
         "file",
         "lambda",
         "mse"
@@ -363,10 +356,7 @@ bool testLinearRegression
         arguments.modelName,
         logData,
         columnNames
-    )) {
-        std::cerr << "Failed to log run." << "\n"; 
-        return false;
-    }
+    )) std::cerr << "Failed to log run." << "\n"; 
 
     return true;
 }
@@ -542,7 +532,7 @@ bool testLogisticRegression
 
     // I would love for this to be a static const.
     std::vector<std::string> columnNames = {
-        "name",
+        "file",
         "lambda",
         "accuracy",
     };
@@ -554,10 +544,7 @@ bool testLogisticRegression
         data.arguments.modelName,
         logData,
         columnNames
-    )) {
-        std::cerr << "Unable to log logistic regression." << "\n";
-        return false;
-    }
+    )) std::cerr << "Unable to log logistic regression." << "\n";
 
     return true;
 
@@ -621,6 +608,7 @@ bool trainModel
                 return false;
             }
             break;
+
         case ModelType::LogisticRegression:
             if (!trainLogisticRegression(
                 argc,
@@ -630,6 +618,7 @@ bool trainModel
                 return false;
             }
             break;
+
         default:
             std::cerr << "Who knows? Nothing broke, try again!" << "\n";
             return false;
