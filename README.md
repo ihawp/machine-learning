@@ -41,9 +41,34 @@ Any command is a type of action followed by a type of model, and then the respec
 
 ## Examples:
 
-### Train a Linear Regression model
+### Linear Regression
+
+#### Train a Linear Regression model:
 ```
-usr/bin/you> a.exe -trm -lr world_happiness_data 2020a.csv 2020a_test 0 25
+a.exe -trm -lr world_happiness_data 2020a.csv 2020_lr_model 0 25
+```
+
+#### Test a Linear Regression model:
+
+Here we use the same model name as before, but update our data to a test set, ***2020b.csv***. We also remove the lambda parameter.
+
+```
+a.exe -tem -lr world_happiness_data 2020b.csv 2020_lr_model 0
+```
+
+### Logistic Regression
+
+#### Train a Logistic Regression model:
+
+Here ***2020a*** identifies the prefix for a properly initialized Logistic Regression dataset, where there is a file called ***2020a.csv*** and another file called ***2020a_threshold.csv***. The 'threshold file' contains one row with the same amount of columns as there are rows in ***2020a.csv***, where each column holds a value (0 or 1) representing correct/incorrect or happy/unhappy in our case.
+
+```
+a.exe -trm -lor -trm -lor world_happiness_data 2020a 2020_lor_model 25
+```
+
+#### Test a Logistic Regression model:
+```
+a.exe -trm -lor -trm -lor world_happiness_data 2020b 2020_lor_model
 ```
 
 ### Citations
